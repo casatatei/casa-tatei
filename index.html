@@ -550,17 +550,34 @@
         </div>
         <p class="text-muted" id="dia-label" style="text-align:center;margin-top:-6px;margin-bottom:4px"></p>
 
+        <!-- Resumen habitaciones -->
+        <div id="resumen-habs-card" style="display:none">
+          <div class="card">
+            <div class="card-header"><div class="card-titulo">Resumen de habitaciones</div></div>
+            <div class="card-body" id="resumen-habs-body"></div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-header">
-            <div class="card-titulo" id="hab-card-titulo">Habitaciones</div>
+            <div class="card-titulo" id="hab-card-titulo">Habitaciones — tocá para marcar</div>
           </div>
           <div class="card-body">
-            <div class="leyenda">
-              <button class="leyenda-item" onclick="marcarTodas('checkout')"><span class="dot dot-out"></span> Check-out</button>
-              <button class="leyenda-item" onclick="marcarTodas('checkin')"><span class="dot dot-in"></span> Check-in</button>
-              <button class="leyenda-item" onclick="marcarTodas('libre')"><span class="dot dot-lib"></span> Libre</button>
-            </div>
+            <p class="text-muted" style="margin-bottom:12px">Tocá cada habitación para indicar qué pasa mañana</p>
             <div class="habs-grid" id="habs-grid"></div>
+          </div>
+        </div>
+
+        <!-- Mini selector que aparece al tocar una hab -->
+        <div id="hab-selector-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;align-items:flex-end;justify-content:center" onclick="cerrarHabSelector()">
+          <div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:420px" onclick="event.stopPropagation()">
+            <div style="font-size:1rem;font-weight:700;color:var(--brown);margin-bottom:16px;text-align:center" id="hab-selector-titulo">¿Qué pasa con esta habitación?</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <button onclick="elegirEstadoHab('checkout')" style="padding:16px;border-radius:12px;border:2px solid var(--orange);background:var(--orange-lt);color:#7a4f00;font-size:0.95rem;font-weight:600;cursor:pointer">🧹 Sale huésped</button>
+              <button onclick="elegirEstadoHab('checkin')"  style="padding:16px;border-radius:12px;border:2px solid var(--green);background:var(--green-lt);color:#1b5e20;font-size:0.95rem;font-weight:600;cursor:pointer">✨ Entra huésped</button>
+              <button onclick="elegirEstadoHab('libre')"    style="padding:16px;border-radius:12px;border:2px solid var(--purple);background:var(--purple-lt);color:#3d1f8f;font-size:0.95rem;font-weight:600;cursor:pointer">🌿 Sin movimiento</button>
+              <button onclick="elegirEstadoHab(null)"       style="padding:16px;border-radius:12px;border:2px solid var(--border);background:var(--cream);color:var(--muted);font-size:0.95rem;font-weight:600;cursor:pointer">✕ Sin marcar</button>
+            </div>
           </div>
         </div>
 
@@ -645,14 +662,28 @@
               </select>
             </div>
             <div class="campo mt-3">
+              <label>Categoría</label>
+              <select class="input-base" id="pend-cat">
+                <option value="compra">🛒 Compra — hay que comprar algo</option>
+                <option value="mantenimiento">🔧 Mantenimiento — algo que reparar</option>
+                <option value="limpieza">🧹 Limpieza — tarea de limpieza</option>
+                <option value="gestion">📋 Gestión — trámite o decisión</option>
+                <option value="general">📌 General</option>
+              </select>
+            </div>
+            <div class="campo mt-3">
               <label>¿Para quién?</label>
               <select class="input-base" id="pend-para">
-                <option value="ivan">🔧 Iván — mantenimiento</option>
-                <option value="lupita">🧹 Lupita — limpieza</option>
-                <option value="pablo">📊 Pablo — gestión/compras</option>
+                <option value="pablo">📊 Pablo</option>
+                <option value="ivan">🔧 Iván</option>
+                <option value="lupita">🧹 Lupita</option>
                 <option value="todos">👥 Todos</option>
                 <option value="registro">📁 Solo registro</option>
               </select>
+            </div>
+            <div class="campo mt-3">
+              <label>Notas (opcional)</label>
+              <textarea class="input-base" id="pend-notas" placeholder="ej: comprar en Bodega Aurrerá, marca X, cantidad aproximada..." style="min-height:60px"></textarea>
             </div>
             <button class="btn-primary mt-3" onclick="agregarPendiente()">+ Agregar tarea</button>
           </div>
@@ -1151,17 +1182,33 @@ function inicializarHabs() {
     const b = document.createElement("button");
     b.className = "hab-btn"; b.id = "hab-"+h;
     b.innerHTML = `<span class="hab-icono">🛏</span><span>${h}</span>`;
-    b.onclick = () => ciclarHab(h, b);
+    b.onclick = () => abrirHabSelector(h);
     grid.appendChild(b);
   });
 }
-function ciclarHab(h, b) {
-  const c  = [null,"checkout","checkin","libre"];
+let habSeleccionada = null;
+function abrirHabSelector(h) {
+  habSeleccionada = h;
+  const nombres = {null:"Sin marcar", checkout:"Sale huésped", checkin:"Entra huésped", libre:"Sin movimiento"};
+  document.getElementById("hab-selector-titulo").textContent = `${h} — ${nombres[estados[h]]||"Sin marcar"}`;
+  const ov = document.getElementById("hab-selector-overlay");
+  ov.style.display = "flex";
+}
+function cerrarHabSelector() {
+  document.getElementById("hab-selector-overlay").style.display = "none";
+  habSeleccionada = null;
+}
+function elegirEstadoHab(estado) {
+  if (!habSeleccionada) return;
   const ic = {null:"🛏", checkout:"🧹", checkin:"✨", libre:"🌿"};
-  estados[h] = c[(c.indexOf(estados[h])+1) % c.length];
-  b.className = "hab-btn"+(estados[h]?" "+estados[h]:"");
-  b.innerHTML = `<span class="hab-icono">${ic[estados[h]]}</span><span>${h}</span>`;
+  const etiquetas = {null:"Sin marcar", checkout:"Sale huésped 🧹", checkin:"Entra huésped ✨", libre:"Sin movimiento 🌿"};
+  estados[habSeleccionada] = estado;
+  const b = document.getElementById("hab-"+habSeleccionada);
+  b.className = "hab-btn"+(estado?" "+estado:"");
+  b.innerHTML = `<span class="hab-icono">${ic[estado]}</span><span>${habSeleccionada}</span>`;
   guardarEstadosHabs();
+  actualizarResumenHabs();
+  cerrarHabSelector();
 }
 function marcarTodas(e) {
   const ic = {checkout:"🧹", checkin:"✨", libre:"🌿"};
@@ -1172,6 +1219,24 @@ function marcarTodas(e) {
     b.innerHTML = `<span class="hab-icono">${ic[e]}</span><span>${h}</span>`;
   });
   guardarEstadosHabs();
+  actualizarResumenHabs();
+}
+function actualizarResumenHabs() {
+  const checkouts = HABS.filter(h=>estados[h]==="checkout");
+  const checkins  = HABS.filter(h=>estados[h]==="checkin");
+  const libres    = HABS.filter(h=>estados[h]==="libre");
+  const sin       = HABS.filter(h=>!estados[h]);
+  const card      = document.getElementById("resumen-habs-card");
+  const body      = document.getElementById("resumen-habs-body");
+  const hayAlgo   = checkouts.length || checkins.length || libres.length;
+  card.style.display = hayAlgo ? "block" : "none";
+  if (!hayAlgo) return;
+  body.innerHTML = [
+    checkouts.length ? `<div style="margin-bottom:8px"><span style="font-weight:600;color:#7a4f00">🧹 Sale huésped:</span> ${checkouts.join(", ")}</div>` : "",
+    checkins.length  ? `<div style="margin-bottom:8px"><span style="font-weight:600;color:#1b5e20">✨ Entra huésped:</span> ${checkins.join(", ")}</div>` : "",
+    libres.length    ? `<div style="margin-bottom:8px"><span style="font-weight:600;color:#3d1f8f">🌿 Sin movimiento:</span> ${libres.join(", ")}</div>` : "",
+    sin.length       ? `<div><span style="color:var(--muted)">🛏 Sin marcar:</span> <span style="color:var(--muted)">${sin.join(", ")}</span></div>` : "",
+  ].join("");
 }
 function guardarEstadosHabs() {
   localStorage.setItem("tatei-habs-"+isoHoy(), JSON.stringify(estados));
@@ -1191,6 +1256,7 @@ function cargarEstadosHabs() {
       }
     }
   });
+  actualizarResumenHabs();
 }
 
 // ─── Espacios ────────────────────────────────────
@@ -1259,7 +1325,9 @@ async function renderPendientes() {
       </button>
       <div class="item-info">
         <div class="item-texto">${p.texto}</div>
+        ${p.notas ? `<div style="font-size:0.82rem;color:#6b4f3a;margin-top:4px;font-style:italic">📝 ${p.notas}</div>` : ""}
         <div class="item-meta">
+          ${p.cat ? `<span>${{compra:"🛒",mantenimiento:"🔧",limpieza:"🧹",gestion:"📋",general:"📌"}[p.cat]||"📌"}</span> &nbsp;·&nbsp;` : ""}
           <span class="badge ${BADGE_CLS[p.para||"registro"]}">${BADGE_LBL[p.para||"registro"]}</span>
           &nbsp;·&nbsp; ${p.fecha||""}
         </div>
@@ -1282,8 +1350,11 @@ async function agregarPendiente() {
   if (!txt) return;
   const para     = document.getElementById("pend-para").value;
   const urgencia = document.getElementById("pend-urgencia").value;
-  await DATA.push("pendientes", {texto:txt, para, urgencia, resuelto:false, fecha:isoHoy(), ts:Date.now()});
+  const cat      = document.getElementById("pend-cat")?.value || "general";
+  const notas    = document.getElementById("pend-notas")?.value.trim() || "";
+  await DATA.push("pendientes", {texto:txt, para, urgencia, cat, notas, resuelto:false, fecha:isoHoy(), ts:Date.now()});
   document.getElementById("pend-texto").value = "";
+  if (document.getElementById("pend-notas")) document.getElementById("pend-notas").value = "";
   renderPendientes();
 }
 async function cambiarEstado(id, estado) {
