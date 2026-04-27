@@ -618,36 +618,50 @@
       </div>
     </div>
 
-    <!-- Tab: PENDIENTES -->
+    <!-- Tab: TAREAS -->
     <div id="atab-pendientes" class="app-tab" style="display:none">
       <div class="app-header">
-        <div class="app-header-title">📌 Pendientes</div>
-        <div class="app-header-sub">Cosas que van apareciendo</div>
+        <div class="app-header-title">✅ Tareas</div>
+        <div class="app-header-sub">Lo que hay que hacer en Casa Tatei</div>
       </div>
       <div class="contenido">
         <div class="card">
+          <div class="card-header"><div class="card-titulo">Nueva tarea</div></div>
           <div class="card-body">
             <div class="campo">
-              <label>¿Qué pasó?</label>
-              <input type="text" class="input-base" id="pend-texto" placeholder="ej: cafetera de Sol no enciende"
+              <label>¿Qué hay que hacer?</label>
+              <input type="text" class="input-base" id="pend-texto"
+                placeholder="ej: no sale agua caliente en Sol, falta jabón de lavar..."
                 onkeydown="if(event.key==='Enter')agregarPendiente()"/>
             </div>
             <div class="campo mt-3">
-              <label>¿Para quién?</label>
-              <select class="input-base pend-select" id="pend-para">
-                <option value="ivan">🔧 Iván — mantenimiento</option>
-                <option value="lupita">🧹 Lupita — limpieza</option>
-                <option value="pablo">📊 Pablo — gestión</option>
-                <option value="todos">👥 Todos</option>
-                <option value="registro">📁 Solo registro interno</option>
+              <label>¿Qué tan urgente es?</label>
+              <select class="input-base" id="pend-urgencia">
+                <option value="urgente">🚨 Urgente — hay que resolverlo hoy</option>
+                <option value="pronto">⚡ Pronto — esta semana</option>
+                <option value="normal" selected>📋 Normal — cuando se pueda</option>
               </select>
             </div>
-            <button class="btn-primary mt-3" onclick="agregarPendiente()">+ Agregar</button>
+            <div class="campo mt-3">
+              <label>¿Para quién?</label>
+              <select class="input-base" id="pend-para">
+                <option value="ivan">🔧 Iván — mantenimiento</option>
+                <option value="lupita">🧹 Lupita — limpieza</option>
+                <option value="pablo">📊 Pablo — gestión/compras</option>
+                <option value="todos">👥 Todos</option>
+                <option value="registro">📁 Solo registro</option>
+              </select>
+            </div>
+            <button class="btn-primary mt-3" onclick="agregarPendiente()">+ Agregar tarea</button>
           </div>
         </div>
         <div class="card">
-          <div class="card-header">
-            <div class="card-titulo">Lista de pendientes</div>
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+            <div class="card-titulo">Lista de tareas</div>
+            <button onclick="toggleMostrarHechas()" id="btn-mostrar-hechas"
+              style="font-size:0.75rem;color:var(--muted);background:none;border:none;padding:0;cursor:pointer">
+              Ver terminadas
+            </button>
           </div>
           <div class="card-body">
             <div class="item-list" id="lista-pendientes"></div>
@@ -793,7 +807,7 @@
       <span class="nav-icon">📋</span><span>Briefing</span>
     </button>
     <button class="nav-item" id="anav-pendientes" onclick="navAdmin('pendientes',this)">
-      <span class="nav-icon">📌</span><span>Pendientes</span>
+      <span class="nav-icon">✅</span><span>Tareas</span>
     </button>
     <button class="nav-item" id="anav-bitacora" onclick="navAdmin('bitacora',this)">
       <span class="nav-icon">📓</span><span>Bitácora</span>
@@ -821,18 +835,27 @@
 
     <!-- Tab Hoy -->
     <div id="etab-vista-hoy" class="contenido">
+      <div id="banner-urgente"></div>
       <div id="fichaje-card"></div>
       <div id="equipo-briefing-contenido"></div>
 
       <!-- Novedades del equipo -->
       <div class="card">
-        <div class="card-header"><div class="card-titulo">📌 Agregar novedad</div></div>
+        <div class="card-header"><div class="card-titulo">✅ Agregar tarea</div></div>
         <div class="card-body">
           <p class="text-muted" style="margin-bottom:10px">Algo que notaste, falta o se rompió</p>
           <div class="campo">
             <input type="text" class="input-base" id="equipo-novedad-texto"
               placeholder="ej: falta papel higiénico en Luna, grifo gotea en Sol..."
               onkeydown="if(event.key==='Enter')agregarNovedadEquipo()"/>
+          </div>
+          <div class="campo mt-3">
+            <label>¿Qué tan urgente?</label>
+            <select class="input-base" id="equipo-novedad-urgencia">
+              <option value="urgente">🚨 Urgente — hay que resolverlo hoy</option>
+              <option value="pronto">⚡ Pronto — esta semana</option>
+              <option value="normal" selected>📋 Normal — cuando se pueda</option>
+            </select>
           </div>
           <button class="btn-primary mt-3" onclick="agregarNovedadEquipo()">+ Agregar</button>
           <div id="equipo-novedades-lista" style="margin-top:12px"></div>
@@ -1081,6 +1104,7 @@ async function entrarEquipo(quien) {
   document.getElementById("equipo-nombre-header").textContent = nombres[quien];
   document.getElementById("equipo-fecha-header").textContent = fb(hoy);
   mostrarScreen("equipo-app");
+  await renderBannerUrgente(quien);
   await renderFichaje(quien);
   await renderBriefingEquipo(quien);
   await renderNovedadesEquipo();
@@ -1168,36 +1192,65 @@ function cambiarNum(d) {
   document.getElementById("num-display").textContent = numHuespedes;
 }
 
-// ─── Pendientes ──────────────────────────────────
+// ─── Tareas ───────────────────────────────────────
 const BADGE_CLS = {ivan:"badge-ivan",lupita:"badge-lupita",pablo:"badge-pablo",todos:"badge-todos",registro:"badge-registro"};
 const BADGE_LBL = {ivan:"🔧 Iván",lupita:"🧹 Lupita",pablo:"📊 Pablo",todos:"👥 Todos",registro:"📁 Registro"};
+const URG_LBL   = {urgente:"🚨 Urgente", pronto:"⚡ Pronto", normal:"📋 Normal"};
+const URG_STYLE = {
+  urgente:"background:#fff0f0;border-color:#e53935",
+  pronto: "background:#fffde7;border-color:#f9a825",
+  normal: ""
+};
+let mostrarHechas = false;
+function toggleMostrarHechas() {
+  mostrarHechas = !mostrarHechas;
+  document.getElementById("btn-mostrar-hechas").textContent = mostrarHechas ? "Ocultar terminadas" : "Ver terminadas";
+  renderPendientes();
+}
 
 async function renderPendientes() {
   const data = await DATA.getAll("pendientes");
-  const list = Object.entries(data).sort((a,b) => (b[1].ts||0)-(a[1].ts||0));
+  const ORDEN = {urgente:0, pronto:1, normal:2};
+  const list = Object.entries(data)
+    .filter(([,p]) => mostrarHechas ? true : !p.resuelto)
+    .sort((a,b) => {
+      if (a[1].resuelto !== b[1].resuelto) return a[1].resuelto ? 1 : -1;
+      const ua = ORDEN[a[1].urgencia||"normal"];
+      const ub = ORDEN[b[1].urgencia||"normal"];
+      return ua !== ub ? ua - ub : (b[1].ts||0)-(a[1].ts||0);
+    });
   const cont = document.getElementById("lista-pendientes");
-  if (!list.length) { cont.innerHTML = '<div class="empty">Sin pendientes ✦</div>'; return; }
+  if (!list.length) { cont.innerHTML = '<div class="empty">Sin tareas pendientes ✦</div>'; return; }
   cont.innerHTML = "";
   list.forEach(([id, p]) => {
+    const urg   = p.urgencia || "normal";
+    const style = p.resuelto ? "" : URG_STYLE[urg];
     const d = document.createElement("div");
     d.className = "item-card"+(p.resuelto?" hecho":"");
+    if (style) d.setAttribute("style", style);
     d.innerHTML = `
-      <button class="item-check" onclick="togglePend('${id}',${!p.resuelto})" style="border:none;cursor:pointer">
+      <button class="item-check" onclick="togglePend('${id}',${!p.resuelto})" style="border:none;cursor:pointer;background:none">
         ${p.resuelto?"✓":""}
       </button>
       <div class="item-info">
         <div class="item-texto">${p.texto}</div>
-        <div class="item-meta">${p.fecha||""} · <span class="badge ${BADGE_CLS[p.para]}">${BADGE_LBL[p.para]}</span></div>
+        <div class="item-meta">
+          ${URG_LBL[urg]} &nbsp;·&nbsp;
+          <span class="badge ${BADGE_CLS[p.para||"registro"]}">${BADGE_LBL[p.para||"registro"]}</span>
+          &nbsp;·&nbsp; ${p.fecha||""}
+        </div>
       </div>
       <button class="btn-borrar" onclick="borrarPend('${id}')">✕</button>`;
     cont.appendChild(d);
   });
 }
+
 async function agregarPendiente() {
   const txt = document.getElementById("pend-texto").value.trim();
   if (!txt) return;
-  const para = document.getElementById("pend-para").value;
-  await DATA.push("pendientes", {texto:txt, para, resuelto:false, fecha:isoHoy(), ts:Date.now()});
+  const para     = document.getElementById("pend-para").value;
+  const urgencia = document.getElementById("pend-urgencia").value;
+  await DATA.push("pendientes", {texto:txt, para, urgencia, resuelto:false, fecha:isoHoy(), ts:Date.now()});
   document.getElementById("pend-texto").value = "";
   renderPendientes();
 }
@@ -1472,17 +1525,35 @@ function copiarFallback(texto) {
 }
 
 // ─── Vista equipo ────────────────────────────────
+// ─── Banner urgente equipo ────────────────────────
+async function renderBannerUrgente(quien) {
+  const data   = await DATA.getAll("pendientes");
+  const urgentes = Object.values(data).filter(p =>
+    !p.resuelto && p.urgencia === "urgente" &&
+    (p.para === quien || p.para === "todos")
+  );
+  const cont = document.getElementById("banner-urgente");
+  if (!urgentes.length) { cont.innerHTML = ""; return; }
+  cont.innerHTML = `
+    <div style="background:#e53935;color:white;border-radius:14px;padding:14px 16px;margin-bottom:4px">
+      <div style="font-weight:700;font-size:0.95rem;margin-bottom:8px">🚨 Tarea urgente</div>
+      ${urgentes.map(p=>`<div style="font-size:0.88rem;padding:6px 0;border-top:1px solid rgba(255,255,255,0.25)">${p.texto}</div>`).join("")}
+    </div>`;
+}
+
 // ─── Novedades y bitácora del equipo ─────────────
 async function agregarNovedadEquipo() {
   const txt = document.getElementById("equipo-novedad-texto").value.trim();
   if (!txt) return;
-  const nombres = {lupita:"Lupita", ivan:"Iván"};
+  const nombres   = {lupita:"Lupita", ivan:"Iván"};
+  const urgencia  = document.getElementById("equipo-novedad-urgencia")?.value || "normal";
   await DATA.push("pendientes", {
-    texto: `[${nombres[equipoActual]}] ${txt}`,
-    para: "pablo",
+    texto:    `[${nombres[equipoActual]}] ${txt}`,
+    para:     "pablo",
+    urgencia,
     resuelto: false,
-    fecha: isoHoy(),
-    ts: Date.now()
+    fecha:    isoHoy(),
+    ts:       Date.now()
   });
   document.getElementById("equipo-novedad-texto").value = "";
   mostrarToast("✓ Novedad enviada");
