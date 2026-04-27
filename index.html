@@ -1665,12 +1665,12 @@ async function renderFichaje(quien) {
   if (!ficha) {
     // Sin entrada hoy
     html += `<div class="fichaje-estado">Hoy todavía no marcaste entrada</div>`;
-    html += `<button class="btn-fichar entrada" onclick="marcarEntrada('${quien}')">✔ Marcar entrada</button>`;
+    html += `<button class="btn-fichar entrada" onclick="marcarEntrada('${quien}')">✔ Marcar llegada</button>`;
   } else if (ficha.entrada && !ficha.salida) {
     // Entró, no salió
     html += `<div class="fichaje-estado">Entraste a las <strong>${ficha.entrada}</strong></div>`;
     html += `<button class="btn-fichar salida" onclick="marcarSalida('${quien}')">✔ Marcar salida</button>`;
-    html += `<div class="fichaje-registro">Entrada registrada ✓</div>`;
+    html += `<div class="fichaje-registro">Llegada registrada ✓</div>`;
   } else if (ficha.entrada && ficha.salida) {
     // Día completo
     const [eh,em] = ficha.entrada.split(":").map(Number);
@@ -1679,7 +1679,7 @@ async function renderFichaje(quien) {
     const hrs  = Math.floor(mins/60); const min = mins%60;
     html += `<div class="fichaje-estado" style="color:var(--green);font-weight:600">✓ Día registrado</div>`;
     html += `<div class="fichaje-registro">
-      <strong>Entrada:</strong> ${ficha.entrada} &nbsp;·&nbsp; <strong>Salida:</strong> ${ficha.salida}<br>
+      <strong>Llegada:</strong> ${ficha.entrada} &nbsp;·&nbsp; <strong>Salida:</strong> ${ficha.salida}<br>
       <strong>Total hoy:</strong> ${hrs}h ${min}m
     </div>`;
   }
