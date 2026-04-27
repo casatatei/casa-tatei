@@ -541,9 +541,16 @@
         </div>
 
         <!-- Habitaciones -->
+        <!-- Selector Hoy / Mañana -->
+        <div class="tipo-toggle" id="dia-toggle">
+          <button class="tipo-btn ingreso activo" id="btn-dia-hoy" onclick="selDia('hoy',this)">📋 Para hoy</button>
+          <button class="tipo-btn egreso" id="btn-dia-manana" onclick="selDia('manana',this)">🌙 Para mañana</button>
+        </div>
+        <p class="text-muted" id="dia-label" style="text-align:center;margin-top:-6px;margin-bottom:4px"></p>
+
         <div class="card">
           <div class="card-header">
-            <div class="card-titulo">Habitaciones elige día</div>
+            <div class="card-titulo" id="hab-card-titulo">Habitaciones</div>
           </div>
           <div class="card-body">
             <div class="leyenda">
@@ -974,6 +981,21 @@ const DATA = {
   }
 };
 
+// ─── Selector Hoy / Mañana ───────────────────────
+let diaSeleccionado = "manana"; // default: mañana
+function selDia(dia, btn) {
+  diaSeleccionado = dia;
+  document.getElementById("btn-dia-hoy").classList.remove("activo");
+  document.getElementById("btn-dia-manana").classList.remove("activo");
+  btn.classList.add("activo");
+  const fechaMostrar = dia === "hoy" ? fb(hoy) : fb(manana);
+  document.getElementById("dia-label").textContent = fechaMostrar;
+  document.getElementById("hab-card-titulo").textContent = dia === "hoy" ? "Habitaciones hoy" : "Habitaciones mañana";
+  document.getElementById("header-fecha").textContent = dia === "hoy"
+    ? `Generando briefing para hoy: ${fb(hoy)}`
+    : `Hoy: ${fb(hoy)} · Briefing para: ${fb(manana)}`;
+}
+
 // ─── Routing / Login ─────────────────────────────
 function mostrarScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("activa"));
@@ -1006,6 +1028,7 @@ document.getElementById("pin-input").addEventListener("keydown", e => {
 function entrarAdmin() {
   mostrarScreen("admin-app");
   document.getElementById("header-fecha").textContent = `Hoy: ${fb(hoy)} · Briefing para: ${fb(manana)}`;
+  document.getElementById("dia-label").textContent = fb(manana);
   inicializarHabs();
   inicializarEspacios();
   document.getElementById("bit-fecha").value = isoHoy();
@@ -1325,6 +1348,12 @@ async function renderListaCaja() {
 
 // ─── Generar briefings ───────────────────────────
 async function generar() {
+  const fechaTarget = diaSeleccionado === "hoy" ? hoy : manana;
+  const fechaKey    = isoFecha(fechaTarget);
+  const saludoFecha = diaSeleccionado === "hoy"
+    ? `para hoy ${fb(hoy)}`
+    : `para mañana ${fb(manana)}`;
+
   const checkouts = HABS.filter(h=>estados[h]==="checkout");
   const checkins  = HABS.filter(h=>estados[h]==="checkin");
   const libres    = HABS.filter(h=>estados[h]==="libre");
@@ -1337,7 +1366,7 @@ async function generar() {
   const espS = ESPACIOS.filter(e=>espActivos.has(e.id));
 
   // Mensaje Lupita
-  let mL = `🌺 *¡Buenos días Lupita!*\n\nBriefing para mañana ${fb(manana)}:\n\n`;
+  let mL = `🌺 *¡Buenos días Lupita!*\n\nBriefing ${saludoFecha}:\n\n`;
   mL += `🏡 *Repaso general diario:*\n   Pasillos · Cocina · Alberca · Baño exterior · Palapa · Comedor\n\n`;
   if (checkouts.length) { mL += `🧹 *Check-out — limpieza completa:*\n`; checkouts.forEach(h=>mL+=`   • ${h}\n`); mL+="\n"; }
   if (checkins.length)  { mL += `✨ *Check-in — preparar habitación:*\n`; checkins.forEach(h=>mL+=`   • ${h}\n`); mL+="\n"; }
@@ -1349,20 +1378,20 @@ async function generar() {
   mL += `Cualquier duda me avisás 🙏`;
 
   // Mensaje Iván
-  let mI = `🔧 *¡Hola Iván!*\n\nTareas para mañana ${fb(manana)}:\n\n`;
+  let mI = `🔧 *¡Hola Iván!*\n\nTareas ${saludoFecha}:\n\n`;
   if (extI) { extI.split("\n").forEach(l=>{if(l.trim())mI+=`   • ${l.trim()}\n`;}); mI+="\n"; }
   if (pI.length) { mI += `📌 *Pendientes del registro:*\n`; pI.forEach(p=>mI+=`   • ${p.texto}\n`); mI+="\n"; }
   if (!extI && !pI.length) mI += `   Sin tareas asignadas por ahora.\n\n`;
   mI += `Cualquier duda le avisás a Pablo 🙏`;
 
-  // Guardar briefing en Firebase (para que Lupita e Iván lo vean)
-  await DATA.set("briefings", isoFecha(manana), {
+  // Guardar briefing (para que Lupita e Iván lo vean)
+  await DATA.set("briefings", fechaKey, {
     lupita: mL, ivan: mI, generado: new Date().toISOString()
   });
 
   document.getElementById("msg-lupita").textContent = mL;
   document.getElementById("msg-ivan").textContent   = mI;
-  document.getElementById("res-fecha").textContent  = `Para mañana ${fb(manana)}`;
+  document.getElementById("res-fecha").textContent  = `Briefing ${saludoFecha}`;
 
   if (pP.length) {
     let mP = `📊 *Novedades Casa Tatei — ${fb(hoy)}:*\n\n`;
