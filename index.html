@@ -635,9 +635,9 @@
                 onkeydown="if(event.key==='Enter')agregarPendiente()"/>
             </div>
             <div class="campo mt-3">
-              <label>¿Qué tan urgente es?</label>
+              <label>Estado</label>
               <select class="input-base" id="pend-urgencia">
-                <option value="urgente">🚨 Urgente — hay que resolverlo hoy</option>
+                <option value="urgente">🔴 Urgente — hay que resolverlo hoy</option>
                 <option value="pronto">⚡ Pronto — esta semana</option>
                 <option value="normal" selected>📋 Normal — cuando se pueda</option>
               </select>
@@ -955,7 +955,7 @@ const HABS = ["Sierra","Mar","Luna","Volcán","Sol","Selva","Río"];
 const ESPACIOS = [
   {id:"palapa_terapia", label:"🌿 Palapa — terapia",    detalle:"preparar palapa para terapia: incienso, colchoneta, privacidad"},
   {id:"palapa_evento",  label:"✨ Palapa — evento",      detalle:"preparar palapa para evento grupal: sillas, limpieza extra"},
-  {id:"bar",            label:"🍹 Bar",                  detalle:"preparar y limpiar barra de bar completa"},
+  {id:"cocina_extra",   label:"🍳 Cocina extra",         detalle:"limpieza a fondo de cocina: refrigerador, hornillas, alacena"},
   {id:"jardin",         label:"🌱 Jardín extra",         detalle:"repaso especial de jardín y áreas verdes"},
 ];
 const DIAS  = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
@@ -1078,6 +1078,7 @@ function entrarAdmin() {
   document.getElementById("header-fecha").textContent = `Hoy: ${fb(hoy)} · Briefing para: ${fb(manana)}`;
   document.getElementById("dia-label").textContent = fb(manana);
   inicializarHabs();
+  cargarEstadosHabs();
   inicializarEspacios();
   document.getElementById("bit-fecha").value = isoHoy();
   document.getElementById("caja-fecha").value = isoHoy();
@@ -1153,11 +1154,12 @@ function inicializarHabs() {
   });
 }
 function ciclarHab(h, b) {
-  const c = [null,"checkout","checkin","libre"];
+  const c  = [null,"checkout","checkin","libre"];
   const ic = {null:"🛏", checkout:"🧹", checkin:"✨", libre:"🌿"};
   estados[h] = c[(c.indexOf(estados[h])+1) % c.length];
   b.className = "hab-btn"+(estados[h]?" "+estados[h]:"");
   b.innerHTML = `<span class="hab-icono">${ic[estados[h]]}</span><span>${h}</span>`;
+  guardarEstadosHabs();
 }
 function marcarTodas(e) {
   const ic = {checkout:"🧹", checkin:"✨", libre:"🌿"};
@@ -1166,6 +1168,26 @@ function marcarTodas(e) {
     const b = document.getElementById("hab-"+h);
     b.className = "hab-btn "+e;
     b.innerHTML = `<span class="hab-icono">${ic[e]}</span><span>${h}</span>`;
+  });
+  guardarEstadosHabs();
+}
+function guardarEstadosHabs() {
+  localStorage.setItem("tatei-habs-"+isoHoy(), JSON.stringify(estados));
+}
+function cargarEstadosHabs() {
+  const guardado = localStorage.getItem("tatei-habs-"+isoHoy());
+  if (!guardado) return;
+  const saved = JSON.parse(guardado);
+  const ic = {null:"🛏", checkout:"🧹", checkin:"✨", libre:"🌿"};
+  HABS.forEach(h => {
+    if (saved[h] !== undefined) {
+      estados[h] = saved[h];
+      const b = document.getElementById("hab-"+h);
+      if (b) {
+        b.className = "hab-btn"+(estados[h]?" "+estados[h]:"");
+        b.innerHTML = `<span class="hab-icono">${ic[estados[h]]}</span><span>${h}</span>`;
+      }
+    }
   });
 }
 
@@ -1195,11 +1217,12 @@ function cambiarNum(d) {
 // ─── Tareas ───────────────────────────────────────
 const BADGE_CLS = {ivan:"badge-ivan",lupita:"badge-lupita",pablo:"badge-pablo",todos:"badge-todos",registro:"badge-registro"};
 const BADGE_LBL = {ivan:"🔧 Iván",lupita:"🧹 Lupita",pablo:"📊 Pablo",todos:"👥 Todos",registro:"📁 Registro"};
-const URG_LBL   = {urgente:"🚨 Urgente", pronto:"⚡ Pronto", normal:"📋 Normal"};
+const URG_LBL   = {urgente:"🔴 Urgente", pronto:"⚡ Pronto", normal:"📋 Normal", en_progreso:"🔄 En progreso"};
 const URG_STYLE = {
-  urgente:"background:#fff0f0;border-color:#e53935",
-  pronto: "background:#fffde7;border-color:#f9a825",
-  normal: ""
+  urgente:    "background:#fff0f0;border-color:#e53935",
+  pronto:     "background:#fffde7;border-color:#f9a825",
+  en_progreso:"background:#e3f2fd;border-color:#1565c0",
+  normal:     ""
 };
 let mostrarHechas = false;
 function toggleMostrarHechas() {
@@ -1235,10 +1258,17 @@ async function renderPendientes() {
       <div class="item-info">
         <div class="item-texto">${p.texto}</div>
         <div class="item-meta">
-          ${URG_LBL[urg]} &nbsp;·&nbsp;
           <span class="badge ${BADGE_CLS[p.para||"registro"]}">${BADGE_LBL[p.para||"registro"]}</span>
           &nbsp;·&nbsp; ${p.fecha||""}
         </div>
+        ${!p.resuelto ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+          ${["urgente","pronto","normal","en_progreso"].map(s =>
+            `<button onclick="cambiarEstado('${id}','${s}')"
+              style="font-size:0.7rem;padding:2px 8px;border-radius:20px;border:1px solid #ddd;
+              background:${urg===s?"var(--brown)":"white"};color:${urg===s?"white":"var(--muted)"};cursor:pointer">
+              ${URG_LBL[s]}
+            </button>`).join("")}
+        </div>` : ""}
       </div>
       <button class="btn-borrar" onclick="borrarPend('${id}')">✕</button>`;
     cont.appendChild(d);
@@ -1252,6 +1282,10 @@ async function agregarPendiente() {
   const urgencia = document.getElementById("pend-urgencia").value;
   await DATA.push("pendientes", {texto:txt, para, urgencia, resuelto:false, fecha:isoHoy(), ts:Date.now()});
   document.getElementById("pend-texto").value = "";
+  renderPendientes();
+}
+async function cambiarEstado(id, estado) {
+  await DATA.update("pendientes", id, {urgencia:estado});
   renderPendientes();
 }
 async function togglePend(id, val) {
