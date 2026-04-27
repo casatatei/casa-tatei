@@ -821,10 +821,35 @@
 
     <!-- Tab Hoy -->
     <div id="etab-vista-hoy" class="contenido">
-      <!-- Fichaje del día -->
       <div id="fichaje-card"></div>
-      <!-- Briefing -->
       <div id="equipo-briefing-contenido"></div>
+
+      <!-- Novedades del equipo -->
+      <div class="card">
+        <div class="card-header"><div class="card-titulo">📌 Agregar novedad</div></div>
+        <div class="card-body">
+          <p class="text-muted" style="margin-bottom:10px">Algo que notaste, falta o se rompió</p>
+          <div class="campo">
+            <input type="text" class="input-base" id="equipo-novedad-texto"
+              placeholder="ej: falta papel higiénico en Luna, grifo gotea en Sol..."
+              onkeydown="if(event.key==='Enter')agregarNovedadEquipo()"/>
+          </div>
+          <button class="btn-primary mt-3" onclick="agregarNovedadEquipo()">+ Agregar</button>
+          <div id="equipo-novedades-lista" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <!-- Bitácora del día -->
+      <div class="card">
+        <div class="card-header"><div class="card-titulo">📓 ¿Qué hiciste hoy?</div></div>
+        <div class="card-body">
+          <p class="text-muted" style="margin-bottom:10px">Escribí un resumen de tu día</p>
+          <textarea class="input-base" id="equipo-bit-texto"
+            placeholder="ej: limpié Sierra y Mar, repaso de cocina y alberca, cambié toallas en Sol..."
+            style="min-height:90px"></textarea>
+          <button class="btn-primary mt-3" onclick="guardarBitacoraEquipo()">Guardar mi día →</button>
+        </div>
+      </div>
     </div>
 
     <!-- Tab Historial -->
@@ -1058,6 +1083,7 @@ async function entrarEquipo(quien) {
   mostrarScreen("equipo-app");
   await renderFichaje(quien);
   await renderBriefingEquipo(quien);
+  await renderNovedadesEquipo();
   await renderHistorialEquipo(quien);
 }
 
@@ -1446,6 +1472,59 @@ function copiarFallback(texto) {
 }
 
 // ─── Vista equipo ────────────────────────────────
+// ─── Novedades y bitácora del equipo ─────────────
+async function agregarNovedadEquipo() {
+  const txt = document.getElementById("equipo-novedad-texto").value.trim();
+  if (!txt) return;
+  const nombres = {lupita:"Lupita", ivan:"Iván"};
+  await DATA.push("pendientes", {
+    texto: `[${nombres[equipoActual]}] ${txt}`,
+    para: "pablo",
+    resuelto: false,
+    fecha: isoHoy(),
+    ts: Date.now()
+  });
+  document.getElementById("equipo-novedad-texto").value = "";
+  mostrarToast("✓ Novedad enviada");
+  renderNovedadesEquipo();
+}
+
+async function renderNovedadesEquipo() {
+  const data  = await DATA.getAll("pendientes");
+  const nombre = equipoActual === "lupita" ? "Lupita" : "Iván";
+  const mias  = Object.values(data)
+    .filter(p => p.texto && p.texto.startsWith(`[${nombre}]`) && !p.resuelto)
+    .sort((a,b) => (b.ts||0)-(a.ts||0));
+  const cont  = document.getElementById("equipo-novedades-lista");
+  if (!cont) return;
+  if (!mias.length) { cont.innerHTML = ""; return; }
+  cont.innerHTML = `<div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">Tus novedades pendientes:</div>` +
+    mias.map(p => `<div class="item-card">
+      <div class="item-info"><div class="item-texto">${p.texto.replace(/^\[.*?\]\s*/,"")}</div>
+      <div class="item-meta">${p.fecha}</div></div>
+    </div>`).join("");
+}
+
+async function guardarBitacoraEquipo() {
+  const texto = document.getElementById("equipo-bit-texto").value.trim();
+  if (!texto) return;
+  // Buscar fichaje de hoy para las horas
+  const fichajes = await DATA.getAll("fichajes");
+  const ficha    = fichajes[equipoActual+"-"+isoHoy()];
+  let horas = "—";
+  if (ficha && ficha.entrada && ficha.salida) {
+    const [eh,em] = ficha.entrada.split(":").map(Number);
+    const [sh,sm] = ficha.salida.split(":").map(Number);
+    horas = ((sh*60+sm - eh*60-em)/60).toFixed(1);
+  }
+  await DATA.push("bitacora", {
+    empleado: equipoActual, fecha: isoHoy(),
+    horas, texto, ts: Date.now(), tipo: "manual"
+  });
+  document.getElementById("equipo-bit-texto").value = "";
+  mostrarToast("✓ Día guardado en tu bitácora");
+}
+
 // ─── Fichaje ─────────────────────────────────────
 function horaActual() {
   const n = new Date();
