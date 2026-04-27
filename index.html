@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="theme-color" content="#6b4f3a"/>
+  <title>Casa Tatei</title>
+  <style>
+    :root {
+      --brown:       #6b4f3a;
+      --brown-dk:    #4e3828;
+      --brown-lt:    #f0ebe3;
+      --cream:       #faf7f2;
+      --text:        #3a3028;
+      --muted:       #a08060;
+      --border:      #e0d8cc;
+      --green:       #2e7d32;
+      --green-lt:    #e8f5e9;
+      --blue:        #1565c0;
+      --blue-lt:     #e3f2fd;
+      --orange:      #e6a030;
+      --orange-lt:   #fff3e0;
+      --red:         #c62828;
+      --red-lt:      #ffebee;
+      --purple:      #6a1b9a;
+      --purple-lt:   #f3e5f5;
+      --nav:         64px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      height: 100%;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { font-family: inherit; cursor: pointer; }
+    input, textarea, select { font-family: inherit; font-size: 16px; }
+    input:focus, textarea:focus, select:focus { outline: none; }
+
+    /* ── Screens ───────────────────────────────────── */
+    .screen { display: none; min-height: 100vh; }
+    .screen.activa { display: flex; flex-direction: column; }
+
+    /* ── Login ─────────────────────────────────────── */
+    #login {
+      background: var(--brown);
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      gap: 0;
+    }
+    .login-logo { font-size: 2.8rem; margin-bottom: 8px; text-align: center; }
+    .login-titulo { font-size: 1.6rem; color: white; letter-spacing: 0.06em; text-align: center; margin-bottom: 6px; }
+    .login-sub { font-size: 0.9rem; color: rgba(255,255,255,0.65); text-align: center; margin-bottom: 40px; }
+    .login-opciones { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 320px; }
+    .login-btn {
+      padding: 18px 24px; border-radius: 14px; border: none;
+      font-size: 1rem; font-weight: 600; letter-spacing: 0.02em;
+      display: flex; align-items: center; gap: 14px; transition: transform 0.1s, opacity 0.1s;
+    }
+    .login-btn:active { transform: scale(0.97); opacity: 0.9; }
+    .login-btn.admin  { background: white; color: var(--brown); }
+    .login-btn.equipo { background: rgba(255,255,255,0.15); color: white; border: 1.5px solid rgba(255,255,255,0.3); }
+    .login-btn-icon { font-size: 1.4rem; }
+    .login-btn-text { text-align: left; }
+    .login-btn-title { display: block; }
+    .login-btn-sub { display: block; font-size: 0.78rem; font-weight: 400; opacity: 0.7; margin-top: 1px; }
+
+    /* PIN modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: none; align-items: flex-end; justify-content: center; z-index: 200;
+      padding: 0;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal-box {
+      background: white; border-radius: 20px 20px 0 0;
+      padding: 28px 24px calc(28px + var(--safe-bottom));
+      width: 100%; max-width: 420px;
+    }
+    .modal-titulo { font-size: 1.1rem; font-weight: 600; color: var(--brown); margin-bottom: 6px; }
+    .modal-sub { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
+    .pin-input {
+      width: 100%; padding: 16px; text-align: center; font-size: 1.4rem;
+      letter-spacing: 0.3em; border: 2px solid var(--border); border-radius: 12px;
+      margin-bottom: 14px; color: var(--text);
+    }
+    .pin-input:focus { border-color: var(--brown); }
+    .btn-confirmar {
+      width: 100%; padding: 16px; background: var(--brown); color: white;
+      border: none; border-radius: 12px; font-size: 1rem; font-weight: 600;
+    }
+    .btn-confirmar:active { background: var(--brown-dk); }
+    .modal-error { color: var(--red); font-size: 0.85rem; text-align: center; margin-top: 10px; display: none; }
+
+    /* Equipo selector */
+    .equipo-selector { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; margin-top: 20px; }
+    .equipo-btn {
+      padding: 18px 24px; border-radius: 14px; border: 1.5px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1); color: white;
+      font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 14px;
+      transition: transform 0.1s;
+    }
+    .equipo-btn:active { transform: scale(0.97); }
+    .btn-volver-login {
+      margin-top: 16px; background: transparent; border: none; color: rgba(255,255,255,0.6);
+      font-size: 0.9rem; padding: 8px; text-decoration: underline;
+    }
+
+    /* ── App layout ────────────────────────────────── */
+    .app-body {
+      flex: 1; overflow-y: auto; padding: 0 0 calc(var(--nav) + var(--safe-bottom) + 12px);
+      -webkit-overflow-scrolling: touch;
+    }
+    .app-header {
+      background: white; border-bottom: 1px solid var(--border);
+      padding: 16px 20px 14px;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .app-header-title { font-size: 1.1rem; font-weight: 700; color: var(--brown); letter-spacing: 0.04em; }
+    .app-header-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+    /* Bottom nav */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: calc(var(--nav) + var(--safe-bottom));
+      padding-bottom: var(--safe-bottom);
+      background: white; border-top: 1px solid var(--border);
+      display: flex; z-index: 100;
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; border: none; background: transparent;
+      color: var(--muted); font-size: 0.68rem; padding: 8px 4px;
+      transition: color 0.15s;
+    }
+    .nav-item.activo { color: var(--brown); }
+    .nav-item .nav-icon { font-size: 1.4rem; line-height: 1; }
+
+    /* ── Cards / Secciones ─────────────────────────── */
+    .contenido { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+    .card {
+      background: white; border-radius: 16px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.07); overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-titulo {
+      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--muted); font-weight: 600;
+    }
+    .card-body { padding: 14px 16px; }
+
+    /* ── Habitaciones ──────────────────────────────── */
+    .habs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+    .hab-btn {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; padding: 12px 6px; border-radius: 12px; border: 1.5px solid var(--border);
+      background: var(--cream); font-size: 0.85rem; color: var(--text);
+      min-height: 62px; transition: all 0.15s; font-weight: 500;
+    }
+    .hab-btn .hab-icono { font-size: 1.2rem; line-height: 1; }
+    .hab-btn.checkout { background: var(--orange-lt); border-color: var(--orange); color: #7a4f00; }
+    .hab-btn.checkin  { background: var(--green-lt);  border-color: var(--green);  color: #1b5e20; }
+    .hab-btn.libre    { background: var(--purple-lt); border-color: var(--purple); color: #3d1f8f; }
+    .hab-btn:active   { opacity: 0.75; transform: scale(0.96); }
+
+    .leyenda { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .leyenda-item {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 0.78rem; padding: 5px 10px; border-radius: 20px;
+      border: 1px solid var(--border); background: var(--cream); color: var(--muted);
+    }
+    .leyenda-item:active { opacity: 0.7; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-out{background:var(--orange)} .dot-in{background:var(--green)} .dot-lib{background:var(--purple)}
+
+    /* Repaso general */
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .chip {
+      background: var(--brown-lt); border-radius: 20px;
+      padding: 5px 12px; font-size: 0.8rem; color: var(--brown);
+    }
+
+    /* Espacios */
+    .espacios-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .espacio-btn {
+      padding: 12px 10px; border-radius: 12px; border: 1.5px solid var(--border);
+      background: var(--cream); font-size: 0.82rem; color: var(--text);
+      text-align: left; line-height: 1.3; min-height: 50px; transition: all 0.15s;
+    }
+    .espacio-btn.activo { background: var(--orange-lt); border-color: var(--orange); color: #7a4f00; }
+    .espacio-btn:active { opacity: 0.75; }
+
+    /* Inputs */
+    .campo { display: flex; flex-direction: column; gap: 6px; }
+    .campo label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+    .input-base {
+      width: 100%; padding: 13px 14px;
+      border: 1.5px solid var(--border); border-radius: 12px;
+      background: var(--cream); color: var(--text); font-size: 16px;
+    }
+    .input-base:focus { border-color: var(--brown); background: white; }
+    textarea.input-base { resize: vertical; min-height: 80px; line-height: 1.5; }
+    select.input-base { appearance: none; -webkit-appearance: none; }
+
+    .campo-row { display: flex; gap: 10px; align-items: flex-end; }
+    .campo-row .input-base { flex: 1; }
+
+    /* Número de huéspedes */
+    .num-row { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+    .num-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--border);
+      background: white; font-size: 1.3rem; color: var(--brown);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .num-btn:active { background: var(--brown-lt); }
+    .num-display { font-size: 1.4rem; font-weight: 700; color: var(--brown); min-width: 32px; text-align: center; }
+    .num-label { font-size: 0.83rem; color: var(--muted); }
+
+    /* ── Pendientes ────────────────────────────────── */
+    .add-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .add-row .input-base { flex: 1; min-width: 0; }
+    .btn-add {
+      width: 44px; height: 44px; border-radius: 12px; border: none;
+      background: var(--brown); color: white; font-size: 1.3rem; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .btn-add:active { background: var(--brown-dk); }
+
+    .pend-select { width: 100%; margin-bottom: 10px; }
+
+    .item-list { display: flex; flex-direction: column; gap: 8px; }
+    .item-card {
+      display: flex; align-items: flex-start; gap: 10px;
+      background: var(--cream); border-radius: 12px;
+      padding: 12px 12px; border: 1px solid var(--border);
+    }
+    .item-card.hecho { opacity: 0.4; }
+    .item-card.hecho .item-texto { text-decoration: line-through; }
+    .item-check {
+      width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border);
+      background: white; flex-shrink: 0; margin-top: 1px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; color: transparent; transition: all 0.15s;
+    }
+    .item-card.hecho .item-check { background: var(--green); border-color: var(--green); color: white; }
+    .item-check:active { opacity: 0.7; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-texto { font-size: 0.9rem; line-height: 1.4; word-break: break-word; }
+    .item-meta { font-size: 0.73rem; color: var(--muted); margin-top: 3px; }
+    .badge {
+      font-size: 0.7rem; padding: 2px 8px; border-radius: 20px;
+      white-space: nowrap; font-weight: 600; flex-shrink: 0; margin-top: 2px;
+    }
+    .badge-ivan    { background: var(--blue-lt);   color: var(--blue); }
+    .badge-lupita  { background: var(--orange-lt);  color: #7a4f00; }
+    .badge-pablo   { background: var(--red-lt);     color: var(--red); }
+    .badge-todos   { background: var(--purple-lt);  color: var(--purple); }
+    .badge-registro{ background: var(--green-lt);   color: var(--green); }
+    .btn-borrar { background: none; border: none; color: #ccc; font-size: 1rem; padding: 4px; flex-shrink: 0; }
+    .btn-borrar:active { color: var(--red); }
+    .empty { text-align: center; color: var(--muted); font-size: 0.88rem; padding: 24px 16px; }
+
+    /* ── Bitácora ──────────────────────────────────── */
+    .emp-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+    .emp-btn {
+      flex: 1; padding: 11px; border-radius: 10px; border: 1.5px solid var(--border);
+      background: var(--cream); font-size: 0.88rem; font-weight: 500; color: var(--muted);
+      transition: all 0.15s;
+    }
+    .emp-btn.activo { background: var(--brown); border-color: var(--brown); color: white; }
+    .emp-btn:active { opacity: 0.8; }
+
+    .bit-entry {
+      background: var(--cream); border-radius: 12px; padding: 13px 14px;
+      border: 1px solid var(--border); margin-bottom: 8px;
+    }
+    .bit-fecha { font-size: 0.75rem; color: var(--muted); margin-bottom: 5px; }
+    .bit-texto { font-size: 0.88rem; line-height: 1.5; white-space: pre-wrap; }
+    .bit-horas {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--brown-lt); border-radius: 20px; padding: 3px 10px;
+      font-size: 0.75rem; color: var(--brown); margin-top: 8px;
+    }
+
+    /* ── Caja ──────────────────────────────────────── */
+    .tipo-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tipo-btn {
+      flex: 1; padding: 13px; border-radius: 10px; border: 1.5px solid var(--border);
+      background: var(--cream); font-size: 0.9rem; font-weight: 600; color: var(--muted); transition: all 0.15s;
+    }
+    .tipo-btn.ingreso.activo { background: var(--green-lt);  border-color: var(--green);  color: var(--green); }
+    .tipo-btn.egreso.activo  { background: var(--orange-lt); border-color: var(--orange); color: #7a4f00; }
+    .tipo-btn:active { opacity: 0.8; }
+
+    .resumen-cards { display: flex; gap: 8px; }
+    .res-card { flex: 1; border-radius: 12px; padding: 12px; text-align: center; }
+    .res-card.ing { background: var(--green-lt); }
+    .res-card.eg  { background: var(--orange-lt); }
+    .res-card.net { background: var(--purple-lt); }
+    .res-num { font-size: 1rem; font-weight: 700; margin-bottom: 2px; }
+    .res-num.ing { color: var(--green); }
+    .res-num.eg  { color: #b45000; }
+    .res-label { font-size: 0.7rem; color: var(--muted); }
+
+    .foto-area {
+      border: 1.5px dashed var(--border); border-radius: 12px;
+      padding: 16px; text-align: center; cursor: pointer;
+      background: var(--cream); transition: border-color 0.15s;
+    }
+    .foto-area:active { border-color: var(--brown); }
+    .foto-area-texto { font-size: 0.85rem; color: var(--muted); margin-top: 6px; }
+    .foto-preview { max-width: 100%; border-radius: 10px; margin-top: 10px; max-height: 180px; object-fit: cover; }
+
+    .mov-card {
+      background: var(--cream); border-radius: 12px; padding: 13px 14px;
+      border: 1px solid var(--border); margin-bottom: 8px; display: flex; gap: 12px; align-items: flex-start;
+    }
+    .mov-monto-col { text-align: right; flex-shrink: 0; }
+    .mov-monto { font-size: 1rem; font-weight: 700; }
+    .mov-monto.ing { color: var(--green); }
+    .mov-monto.eg  { color: #b45000; }
+    .mov-flecha { font-size: 0.7rem; }
+    .mov-info { flex: 1; min-width: 0; }
+    .mov-desc { font-size: 0.88rem; line-height: 1.4; }
+    .mov-cat  { font-size: 0.73rem; color: var(--muted); margin-top: 2px; }
+    .mov-foto { max-width: 100%; border-radius: 8px; margin-top: 8px; max-height: 120px; object-fit: cover; }
+
+    /* ── Botones principales ───────────────────────── */
+    .btn-primary {
+      width: 100%; padding: 16px; background: var(--brown); color: white;
+      border: none; border-radius: 14px; font-size: 1rem; font-weight: 600;
+      letter-spacing: 0.02em; transition: background 0.15s;
+    }
+    .btn-primary:active { background: var(--brown-dk); }
+    .btn-secondary {
+      width: 100%; padding: 14px; background: transparent; color: var(--muted);
+      border: 1.5px solid var(--border); border-radius: 14px; font-size: 0.9rem;
+    }
+    .btn-secondary:active { background: var(--brown-lt); }
+
+    /* ── Resultado ─────────────────────────────────── */
+    #resultado {
+      position: fixed; inset: 0; background: var(--cream);
+      overflow-y: auto; z-index: 150; display: none;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: calc(20px + var(--safe-bottom));
+    }
+    #resultado.visible { display: block; }
+    .res-header {
+      background: var(--brown); color: white;
+      padding: 20px 20px calc(20px + var(--safe-bottom) - var(--safe-bottom));
+      text-align: center;
+    }
+    .res-header h1 { font-size: 1.2rem; letter-spacing: 0.06em; }
+    .res-header p  { font-size: 0.83rem; opacity: 0.7; margin-top: 4px; }
+    .res-contenido { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .msg-box {
+      background: white; border-radius: 12px; padding: 15px;
+      white-space: pre-wrap; font-size: 0.88rem; line-height: 1.65;
+      border: 1px solid var(--border); margin-bottom: 10px;
+      word-break: break-word;
+    }
+    .btn-copiar {
+      width: 100%; padding: 15px; color: white; border: none;
+      border-radius: 12px; font-size: 0.95rem; font-weight: 600;
+      margin-bottom: 8px; transition: opacity 0.15s; display: flex;
+      align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-copiar:active { opacity: 0.85; }
+    .btn-copiar.verde  { background: #2e7d32; }
+    .btn-copiar.azul   { background: var(--blue); }
+    .btn-copiar.rosa   { background: #880e4f; }
+    .btn-copiar.gris   { background: #888 !important; }
+
+    /* ── Vista Equipo ──────────────────────────────── */
+    .equipo-header {
+      background: var(--brown);
+      padding: 24px 20px 20px;
+      text-align: center;
+    }
+    .equipo-nombre { font-size: 1.3rem; font-weight: 700; color: white; margin-bottom: 2px; }
+    .equipo-fecha  { font-size: 0.83rem; color: rgba(255,255,255,0.65); }
+    .equipo-nav-tab {
+      flex: 1; padding: 14px; text-align: center; border: none;
+      background: transparent; font-size: 0.85rem; color: var(--muted);
+      border-bottom: 2px solid transparent; font-weight: 500; transition: all 0.15s;
+    }
+    .equipo-nav-tab.activo { color: var(--brown); border-bottom-color: var(--brown); }
+    .equipo-tab-bar {
+      background: white; display: flex;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 50;
+    }
+
+    .briefing-equipo {
+      background: white; border-radius: 16px; padding: 18px;
+      font-size: 0.92rem; line-height: 1.7; white-space: pre-wrap;
+      border: 1px solid var(--border); word-break: break-word;
+    }
+    .sin-briefing {
+      text-align: center; padding: 40px 20px;
+    }
+    .sin-briefing .emoji { font-size: 2.5rem; margin-bottom: 12px; }
+    .sin-briefing p { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+
+    /* Misc */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 4px 0; }
+    .text-muted { color: var(--muted); font-size: 0.83rem; }
+    .mt-2 { margin-top: 8px; }
+    .mt-3 { margin-top: 12px; }
+    .mt-4 { margin-top: 16px; }
+    /* Fichaje */
+    .fichaje-card {
+      background: white; border-radius: 16px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.07); overflow: hidden;
+      text-align: center; padding: 24px 20px;
+    }
+    .fichaje-hora { font-size: 2.8rem; font-weight: 700; color: var(--brown); letter-spacing: 0.04em; margin-bottom: 4px; }
+    .fichaje-estado { font-size: 0.85rem; color: var(--muted); margin-bottom: 20px; }
+    .btn-fichar {
+      width: 100%; padding: 18px; border: none; border-radius: 14px;
+      font-size: 1.1rem; font-weight: 700; letter-spacing: 0.02em; transition: opacity 0.15s;
+    }
+    .btn-fichar:active { opacity: 0.8; }
+    .btn-fichar.entrada { background: var(--green); color: white; }
+    .btn-fichar.salida  { background: #b45000; color: white; }
+    .fichaje-registro { margin-top: 14px; font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+    .fichaje-registro strong { color: var(--text); }
+    .horas-mes-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--brown-lt); border-radius: 20px;
+      padding: 6px 14px; font-size: 0.82rem; color: var(--brown);
+      margin-top: 12px; font-weight: 600;
+    }
+
+    /* Tabla fichajes admin */
+    .fichaje-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .fichaje-row:last-child { border-bottom: none; }
+    .fichaje-row-fecha { font-size: 0.78rem; color: var(--muted); min-width: 90px; }
+    .fichaje-row-horas { font-size: 0.88rem; flex: 1; }
+    .fichaje-row-total { font-size: 0.82rem; font-weight: 700; color: var(--brown); white-space: nowrap; }
+
+    .firebase-banner {
+      background: var(--blue-lt); border-left: 3px solid var(--blue);
+      padding: 10px 14px; border-radius: 0 8px 8px 0;
+      font-size: 0.8rem; color: #1a237e; line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: LOGIN
+════════════════════════════════════════════════════ -->
+<div id="login" class="screen activa">
+  <div class="login-logo">🌿</div>
+  <div class="login-titulo">Casa Tatei</div>
+  <div class="login-sub">San Pancho, Nayarit</div>
+
+  <!-- Opciones principales -->
+  <div class="login-opciones" id="login-opciones">
+    <button class="login-btn admin" onclick="iniciarAdmin()">
+      <span class="login-btn-icon">🔑</span>
+      <span class="login-btn-text">
+        <span class="login-btn-title">Admin</span>
+        <span class="login-btn-sub">Priscilla · Pablo</span>
+      </span>
+    </button>
+    <button class="login-btn equipo" onclick="mostrarEquipoSelect()">
+      <span class="login-btn-icon">👤</span>
+      <span class="login-btn-text">
+        <span class="login-btn-title">Soy del equipo</span>
+        <span class="login-btn-sub">Lupita · Iván</span>
+      </span>
+    </button>
+  </div>
+
+  <!-- Selector de miembro del equipo -->
+  <div class="equipo-selector" id="equipo-selector" style="display:none">
+    <button class="equipo-btn" onclick="entrarEquipo('lupita')">
+      <span style="font-size:1.4rem">🧹</span>
+      <span>Lupita</span>
+    </button>
+    <button class="equipo-btn" onclick="entrarEquipo('ivan')">
+      <span style="font-size:1.4rem">🔧</span>
+      <span>Iván</span>
+    </button>
+    <button class="btn-volver-login" onclick="volverLogin()">← Volver</button>
+  </div>
+
+  <div id="firebase-status" style="margin-top:24px;width:100%;max-width:320px;display:none">
+    <div class="firebase-banner">
+      ℹ️ Modo sin conexión — datos guardados en este dispositivo. Para sincronizar entre celulares, configurá Firebase.
+    </div>
+  </div>
+</div>
+
+<!-- PIN modal -->
+<div class="modal-overlay" id="pin-modal">
+  <div class="modal-box">
+    <div class="modal-titulo">Acceso admin</div>
+    <div class="modal-sub">Ingresá el PIN de administrador</div>
+    <input type="password" inputmode="numeric" maxlength="6" class="pin-input" id="pin-input" placeholder="••••"/>
+    <button class="btn-confirmar" onclick="verificarPin()">Entrar</button>
+    <div class="modal-error" id="pin-error">PIN incorrecto</div>
+    <button class="btn-volver-login" style="width:100%;margin-top:12px;color:var(--muted)" onclick="cerrarPinModal()">Cancelar</button>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: ADMIN APP
+════════════════════════════════════════════════════ -->
+<div id="admin-app" class="screen">
+
+  <div class="app-body" id="admin-body">
+
+    <!-- Tab: BRIEFING -->
+    <div id="atab-briefing" class="app-tab">
+      <div class="app-header">
+        <div class="app-header-title">📋 Briefing del día</div>
+        <div class="app-header-sub" id="header-fecha"></div>
+      </div>
+      <div class="contenido">
+
+        <!-- Firebase banner -->
+        <div id="firebase-banner-admin" style="display:none">
+          <div class="firebase-banner">⚡ Conectado — los datos se sincronizan en todos los dispositivos</div>
+        </div>
+
+        <!-- Habitaciones -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-titulo">Habitaciones mañana</div>
+          </div>
+          <div class="card-body">
+            <div class="leyenda">
+              <button class="leyenda-item" onclick="marcarTodas('checkout')"><span class="dot dot-out"></span> Check-out</button>
+              <button class="leyenda-item" onclick="marcarTodas('checkin')"><span class="dot dot-in"></span> Check-in</button>
+              <button class="leyenda-item" onclick="marcarTodas('libre')"><span class="dot dot-lib"></span> Libre</button>
+            </div>
+            <div class="habs-grid" id="habs-grid"></div>
+          </div>
+        </div>
+
+        <!-- Espacios especiales -->
+        <div class="card">
+          <div class="card-header"><div class="card-titulo">Espacios especiales</div></div>
+          <div class="card-body">
+            <p class="text-muted mt-0" style="margin-bottom:10px">Activá si hay uso especial mañana</p>
+            <div class="espacios-grid" id="espacios-grid"></div>
+          </div>
+        </div>
+
+        <!-- Repaso general -->
+        <div class="card">
+          <div class="card-header"><div class="card-titulo">Repaso general Lupita</div></div>
+          <div class="card-body">
+            <p class="text-muted" style="margin-bottom:10px">Siempre incluido automáticamente:</p>
+            <div class="chips">
+              <span class="chip">Pasillos</span><span class="chip">Cocina</span>
+              <span class="chip">Alberca</span><span class="chip">Baño exterior</span>
+              <span class="chip">Palapa</span><span class="chip">Comedor</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Huéspedes -->
+        <div class="card">
+          <div class="card-header"><div class="card-titulo">Huéspedes mañana</div></div>
+          <div class="card-body">
+            <div class="num-row">
+              <button class="num-btn" onclick="cambiarNum(-1)">−</button>
+              <span class="num-display" id="num-display">0</span>
+              <button class="num-btn" onclick="cambiarNum(1)">+</button>
+              <span class="num-label">personas en total</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Extras Lupita -->
+        <div class="card">
+          <div class="card-header"><div class="card-titulo">Extras para Lupita</div></div>
+          <div class="card-body">
+            <textarea class="input-base" id="extras-lupita" placeholder="ej: reponer amenities en Sol, lavar toallas del bar..."></textarea>
+          </div>
+        </div>
+
+        <!-- Extras Iván -->
+        <div class="card">
+          <div class="card-header"><div class="card-titulo">Tareas para Iván</div></div>
+          <div class="card-body">
+            <p class="text-muted" style="margin-bottom:8px">Los pendientes de Iván se agregan automáticamente</p>
+            <textarea class="input-base" id="extras-ivan" placeholder="ej: revisar ventilador de Volcán, reparar puerta de Selva..."></textarea>
+          </div>
+        </div>
+
+        <button class="btn-primary" onclick="generar()">Generar briefings →</button>
+      </div>
+    </div>
+
+    <!-- Tab: PENDIENTES -->
+    <div id="atab-pendientes" class="app-tab" style="display:none">
+      <div class="app-header">
+        <div class="app-header-title">📌 Pendientes</div>
+        <div class="app-header-sub">Cosas que van apareciendo</div>
+      </div>
+      <div class="contenido">
+        <div class="card">
+          <div class="card-body">
+            <div class="campo">
+              <label>¿Qué pasó?</label>
+              <input type="text" class="input-base" id="pend-texto" placeholder="ej: cafetera de Sol no enciende"
+                onkeydown="if(event.key==='Enter')agregarPendiente()"/>
+            </div>
+            <div class="campo mt-3">
+              <label>¿Para quién?</label>
+              <select class="input-base pend-select" id="pend-para">
+                <option value="ivan">🔧 Iván — mantenimiento</option>
+                <option value="lupita">🧹 Lupita — limpieza</option>
+                <option value="pablo">📊 Pablo — gestión</option>
+                <option value="todos">👥 Todos</option>
+                <option value="registro">📁 Solo registro interno</option>
+              </select>
+            </div>
+            <button class="btn-primary mt-3" onclick="agregarPendiente()">+ Agregar</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-titulo">Lista de pendientes</div>
+          </div>
+          <div class="card-body">
+            <div class="item-list" id="lista-pendientes"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: BITÁCORA -->
+    <div id="atab-bitacora" class="app-tab" style="display:none">
+      <div class="app-header">
+        <div class="app-header-title">📓 Bitácora</div>
+        <div class="app-header-sub">Registro de trabajo diario</div>
+      </div>
+      <div class="contenido">
+        <div class="card">
+          <div class="card-header"><div class="card-titulo">Registrar día</div></div>
+          <div class="card-body">
+            <div class="emp-toggle">
+              <button class="emp-btn activo" id="ebtab-lupita" onclick="selEmp('lupita',this)">🧹 Lupita</button>
+              <button class="emp-btn" id="ebtab-ivan" onclick="selEmp('ivan',this)">🔧 Iván</button>
+            </div>
+            <div class="campo">
+              <label>Fecha</label>
+              <input type="date" class="input-base" id="bit-fecha"/>
+            </div>
+            <div class="campo-row mt-3">
+              <div class="campo" style="flex:1">
+                <label>Horas trabajadas</label>
+                <input type="number" class="input-base" id="bit-horas" min="0" max="12" step="0.5" placeholder="5"/>
+              </div>
+            </div>
+            <div class="campo mt-3">
+              <label>¿Qué hizo hoy?</label>
+              <textarea class="input-base" id="bit-texto" placeholder="ej: limpieza completa Sierra y Mar, repaso cocina y alberca, cambio de sábanas Sol..." style="min-height:100px"></textarea>
+            </div>
+            <button class="btn-primary mt-3" onclick="guardarBitacora()">Guardar entrada →</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-titulo">Resumen de horas del mes</div></div>
+          <div class="card-body">
+            <div id="admin-horas-mes"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-titulo">Historial</div></div>
+          <div class="card-body">
+            <div class="emp-toggle">
+              <button class="emp-btn activo" id="hbtab-lupita" onclick="verHistorial('lupita',this)">🧹 Lupita</button>
+              <button class="emp-btn" id="hbtab-ivan" onclick="verHistorial('ivan',this)">🔧 Iván</button>
+            </div>
+            <div id="historial-lista"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: CAJA -->
+    <div id="atab-caja" class="app-tab" style="display:none">
+      <div class="app-header">
+        <div class="app-header-title">💰 Caja</div>
+        <div class="app-header-sub">Ingresos y egresos · Solo admin</div>
+      </div>
+      <div class="contenido">
+        <!-- Resumen -->
+        <div class="card" id="caja-resumen-card">
+          <div class="card-header"><div class="card-titulo" id="caja-mes-label">Resumen del mes</div></div>
+          <div class="card-body">
+            <div class="resumen-cards" id="caja-resumen"></div>
+          </div>
+        </div>
+        <!-- Agregar -->
+        <div class="card">
+          <div class="card-header"><div class="card-titulo">Registrar movimiento</div></div>
+          <div class="card-body">
+            <div class="tipo-toggle">
+              <button class="tipo-btn ingreso activo" id="ttab-ing" onclick="selTipo('ingreso',this)">💚 Ingreso</button>
+              <button class="tipo-btn egreso" id="ttab-eg" onclick="selTipo('egreso',this)">🟠 Egreso</button>
+            </div>
+            <div class="campo">
+              <label>Fecha</label>
+              <input type="date" class="input-base" id="caja-fecha"/>
+            </div>
+            <div class="campo-row mt-3">
+              <div class="campo" style="max-width:150px">
+                <label>Monto $</label>
+                <input type="number" class="input-base" id="caja-monto" min="0" step="0.01" placeholder="0.00"/>
+              </div>
+              <div class="campo" style="flex:1">
+                <label>Categoría</label>
+                <select class="input-base" id="caja-cat">
+                  <optgroup label="— Ingresos —">
+                    <option value="reserva">🏠 Reserva / hospedaje</option>
+                    <option value="bar">🍹 Bar / bebidas</option>
+                    <option value="terapia">🌿 Terapia / retiro</option>
+                    <option value="otro-ing">✦ Otro ingreso</option>
+                  </optgroup>
+                  <optgroup label="— Egresos —">
+                    <option value="amenities">🧴 Amenities / limpieza</option>
+                    <option value="mantenimiento">🔧 Mantenimiento</option>
+                    <option value="comida">🛒 Comida / insumos</option>
+                    <option value="servicios">💡 Servicios</option>
+                    <option value="sueldos">💸 Sueldos</option>
+                    <option value="otro-eg">✦ Otro egreso</option>
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+            <div class="campo mt-3">
+              <label>Descripción</label>
+              <input type="text" class="input-base" id="caja-desc" placeholder="ej: pago de jabones y shampoo para habitaciones"/>
+            </div>
+            <!-- Foto -->
+            <div class="mt-3">
+              <label class="card-titulo" style="display:block;margin-bottom:8px">Foto del ticket</label>
+              <div class="foto-area" onclick="document.getElementById('caja-foto').click()">
+                <div style="font-size:1.8rem">📎</div>
+                <div class="foto-area-texto" id="foto-label">Tocá para adjuntar foto</div>
+              </div>
+              <input type="file" id="caja-foto" accept="image/*" capture="environment" style="display:none" onchange="previsualizarFoto(this)"/>
+              <div id="foto-preview-cont"></div>
+            </div>
+            <button class="btn-primary mt-3" onclick="guardarMovimiento()">Guardar →</button>
+          </div>
+        </div>
+        <!-- Lista -->
+        <div class="card">
+          <div class="card-header"><div class="card-titulo">Movimientos recientes</div></div>
+          <div class="card-body">
+            <div id="lista-caja"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /app-body -->
+
+  <!-- Bottom nav admin -->
+  <nav class="bottom-nav">
+    <button class="nav-item activo" id="anav-briefing" onclick="navAdmin('briefing',this)">
+      <span class="nav-icon">📋</span><span>Briefing</span>
+    </button>
+    <button class="nav-item" id="anav-pendientes" onclick="navAdmin('pendientes',this)">
+      <span class="nav-icon">📌</span><span>Pendientes</span>
+    </button>
+    <button class="nav-item" id="anav-bitacora" onclick="navAdmin('bitacora',this)">
+      <span class="nav-icon">📓</span><span>Bitácora</span>
+    </button>
+    <button class="nav-item" id="anav-caja" onclick="navAdmin('caja',this)">
+      <span class="nav-icon">💰</span><span>Caja</span>
+    </button>
+  </nav>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     SCREEN: EQUIPO
+════════════════════════════════════════════════════ -->
+<div id="equipo-app" class="screen">
+  <div class="equipo-header">
+    <div class="equipo-nombre" id="equipo-nombre-header">Hola 👋</div>
+    <div class="equipo-fecha" id="equipo-fecha-header"></div>
+  </div>
+  <div class="equipo-tab-bar">
+    <button class="equipo-nav-tab activo" id="etab-hoy" onclick="navEquipo('hoy',this)">📋 Hoy</button>
+    <button class="equipo-nav-tab" id="etab-historial" onclick="navEquipo('historial',this)">📓 Mi historial</button>
+    <button class="equipo-nav-tab" id="etab-salir" onclick="cerrarSesion()" style="color:#c0a888;font-size:0.75rem">Salir</button>
+  </div>
+  <div class="app-body" style="padding-bottom:24px">
+
+    <!-- Tab Hoy -->
+    <div id="etab-vista-hoy" class="contenido">
+      <!-- Fichaje del día -->
+      <div id="fichaje-card"></div>
+      <!-- Briefing -->
+      <div id="equipo-briefing-contenido"></div>
+    </div>
+
+    <!-- Tab Historial -->
+    <div id="etab-vista-historial" class="contenido" style="display:none">
+      <div id="equipo-historial-contenido"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     OVERLAY: RESULTADO
+════════════════════════════════════════════════════ -->
+<div id="resultado">
+  <div class="res-header">
+    <h1>✦ Briefings listos</h1>
+    <p id="res-fecha"></p>
+  </div>
+  <div class="res-contenido">
+
+    <div class="card">
+      <div class="card-header"><div class="card-titulo">🌺 Mensaje para Lupita</div></div>
+      <div class="card-body">
+        <div class="msg-box" id="msg-lupita"></div>
+        <button class="btn-copiar verde" id="bc-lupita" onclick="copiarMsg('msg-lupita','bc-lupita','Copiar → Lupita')">
+          📋 Copiar para WhatsApp → Lupita
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><div class="card-titulo">🔧 Mensaje para Iván</div></div>
+      <div class="card-body">
+        <div class="msg-box" id="msg-ivan"></div>
+        <button class="btn-copiar azul" id="bc-ivan" onclick="copiarMsg('msg-ivan','bc-ivan','Copiar → Iván')">
+          📋 Copiar para WhatsApp → Iván
+        </button>
+      </div>
+    </div>
+
+    <div class="card" id="card-pablo" style="display:none">
+      <div class="card-header"><div class="card-titulo">📊 Para Pablo</div></div>
+      <div class="card-body">
+        <div class="msg-box" id="msg-pablo"></div>
+        <button class="btn-copiar rosa" id="bc-pablo" onclick="copiarMsg('msg-pablo','bc-pablo','Copiar → Pablo')">
+          📋 Copiar para WhatsApp → Pablo
+        </button>
+      </div>
+    </div>
+
+    <button class="btn-secondary" onclick="volverDeResultado()">← Volver al briefing</button>
+    <p class="text-muted" style="text-align:center;margin-top:8px" id="res-guardado"></p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     FIREBASE SDK (carga solo si está configurado)
+════════════════════════════════════════════════════ -->
+<script>
+// ══════════════════════════════════════════════════
+// CONFIGURACIÓN FIREBASE
+// Reemplazá estos valores con los de tu proyecto Firebase
+// Dejá como "PENDIENTE" si todavía no lo configuraste
+// ══════════════════════════════════════════════════
+window.FIREBASE_CONFIG = {
+  apiKey:            "PENDIENTE",
+  authDomain:        "PENDIENTE",
+  databaseURL:       "PENDIENTE",
+  projectId:         "PENDIENTE",
+  storageBucket:     "PENDIENTE",
+  messagingSenderId: "PENDIENTE",
+  appId:             "PENDIENTE"
+};
+// ══════════════════════════════════════════════════
+</script>
+
+<script>
+// ─── Constantes ──────────────────────────────────
+const HABS = ["Sierra","Mar","Luna","Volcán","Sol","Selva","Río"];
+const ESPACIOS = [
+  {id:"palapa_terapia", label:"🌿 Palapa — terapia",    detalle:"preparar palapa para terapia: incienso, colchoneta, privacidad"},
+  {id:"palapa_evento",  label:"✨ Palapa — evento",      detalle:"preparar palapa para evento grupal: sillas, limpieza extra"},
+  {id:"bar",            label:"🍹 Bar",                  detalle:"preparar y limpiar barra de bar completa"},
+  {id:"jardin",         label:"🌱 Jardín extra",         detalle:"repaso especial de jardín y áreas verdes"},
+];
+const DIAS  = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const PIN_ADMIN = "1234"; // ← podés cambiarlo aquí
+
+const hoy    = new Date();
+const manana = new Date(hoy); manana.setDate(hoy.getDate()+1);
+function fb(d){ return `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`; }
+function isoHoy(){ return hoy.toISOString().slice(0,10); }
+function isoFecha(d){ return d.toISOString().slice(0,10); }
+
+// ─── Firebase / localStorage ─────────────────────
+const USE_FB = window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey !== "PENDIENTE";
+let fbDB = null;
+
+if (USE_FB) {
+  const fbScript1 = document.createElement("script");
+  fbScript1.src = "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js";
+  fbScript1.onload = () => {
+    const fbScript2 = document.createElement("script");
+    fbScript2.src = "https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js";
+    fbScript2.onload = () => {
+      firebase.initializeApp(window.FIREBASE_CONFIG);
+      fbDB = firebase.database();
+      document.getElementById("firebase-banner-admin").style.display = "block";
+    };
+    document.head.appendChild(fbScript2);
+  };
+  document.head.appendChild(fbScript1);
+}
+
+// ─── Capa de datos ───────────────────────────────
+const DATA = {
+  async getAll(key) {
+    if (USE_FB && fbDB) {
+      const snap = await fbDB.ref(key).once("value");
+      return snap.val() || {};
+    }
+    return JSON.parse(localStorage.getItem("tatei-"+key) || "{}");
+  },
+  async push(key, val) {
+    if (USE_FB && fbDB) {
+      const ref = await fbDB.ref(key).push(val);
+      return ref.key;
+    }
+    const data = await this.getAll(key);
+    const id = "l"+Date.now();
+    data[id] = val; localStorage.setItem("tatei-"+key, JSON.stringify(data));
+    return id;
+  },
+  async set(key, id, val) {
+    if (USE_FB && fbDB) { await fbDB.ref(key+"/"+id).set(val); return; }
+    const data = await this.getAll(key);
+    data[id] = val; localStorage.setItem("tatei-"+key, JSON.stringify(data));
+  },
+  async update(key, id, val) {
+    if (USE_FB && fbDB) { await fbDB.ref(key+"/"+id).update(val); return; }
+    const data = await this.getAll(key);
+    data[id] = {...(data[id]||{}), ...val};
+    localStorage.setItem("tatei-"+key, JSON.stringify(data));
+  },
+  async remove(key, id) {
+    if (USE_FB && fbDB) { await fbDB.ref(key+"/"+id).remove(); return; }
+    const data = await this.getAll(key);
+    delete data[id]; localStorage.setItem("tatei-"+key, JSON.stringify(data));
+  },
+  subscribe(key, cb) {
+    if (USE_FB && fbDB) { fbDB.ref(key).on("value", s => cb(s.val()||{})); return; }
+    this.getAll(key).then(cb);
+  }
+};
+
+// ─── Routing / Login ─────────────────────────────
+function mostrarScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("activa"));
+  document.getElementById(id).classList.add("activa");
+}
+
+function iniciarAdmin() {
+  document.getElementById("pin-modal").classList.add("visible");
+  document.getElementById("pin-input").value = "";
+  document.getElementById("pin-error").style.display = "none";
+  setTimeout(() => document.getElementById("pin-input").focus(), 300);
+}
+function cerrarPinModal() {
+  document.getElementById("pin-modal").classList.remove("visible");
+}
+function verificarPin() {
+  const pin = document.getElementById("pin-input").value;
+  if (pin === PIN_ADMIN) {
+    cerrarPinModal();
+    entrarAdmin();
+  } else {
+    document.getElementById("pin-error").style.display = "block";
+    document.getElementById("pin-input").value = "";
+  }
+}
+document.getElementById("pin-input").addEventListener("keydown", e => {
+  if (e.key === "Enter") verificarPin();
+});
+
+function entrarAdmin() {
+  mostrarScreen("admin-app");
+  document.getElementById("header-fecha").textContent = `Hoy: ${fb(hoy)} · Briefing para: ${fb(manana)}`;
+  inicializarHabs();
+  inicializarEspacios();
+  document.getElementById("bit-fecha").value = isoHoy();
+  document.getElementById("caja-fecha").value = isoHoy();
+  renderPendientes();
+  renderHistorial("lupita");
+  renderResumenCaja();
+  renderListaCaja();
+  if (!USE_FB) document.getElementById("firebase-status").style.display = "block";
+}
+
+function mostrarEquipoSelect() {
+  document.getElementById("login-opciones").style.display = "none";
+  document.getElementById("equipo-selector").style.display = "flex";
+}
+function volverLogin() {
+  document.getElementById("login-opciones").style.display = "flex";
+  document.getElementById("equipo-selector").style.display = "none";
+}
+
+let equipoActual = "lupita";
+async function entrarEquipo(quien) {
+  equipoActual = quien;
+  const nombres = { lupita: "¡Hola Lupita! 🌺", ivan: "¡Hola Iván! 🔧" };
+  document.getElementById("equipo-nombre-header").textContent = nombres[quien];
+  document.getElementById("equipo-fecha-header").textContent = fb(hoy);
+  mostrarScreen("equipo-app");
+  await renderFichaje(quien);
+  await renderBriefingEquipo(quien);
+  await renderHistorialEquipo(quien);
+}
+
+function cerrarSesion() {
+  mostrarScreen("login");
+  document.getElementById("login-opciones").style.display = "flex";
+  document.getElementById("equipo-selector").style.display = "none";
+}
+
+// ─── Navegación admin ────────────────────────────
+function navAdmin(tab, btn) {
+  document.querySelectorAll(".app-tab").forEach(t => t.style.display = "none");
+  document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("activo"));
+  document.getElementById("atab-"+tab).style.display = "block";
+  btn.classList.add("activo");
+  document.getElementById("admin-body").scrollTo(0,0);
+  if (tab === "pendientes") renderPendientes();
+  if (tab === "bitacora")   { renderHistorial(empActual); renderHorasMes(); }
+  if (tab === "caja")       { renderResumenCaja(); renderListaCaja(); }
+}
+
+// ─── Navegación equipo ───────────────────────────
+function navEquipo(tab, btn) {
+  document.querySelectorAll(".equipo-nav-tab").forEach(b => b.classList.remove("activo"));
+  btn.classList.add("activo");
+  document.getElementById("etab-vista-hoy").style.display       = tab==="hoy"      ? "" : "none";
+  document.getElementById("etab-vista-historial").style.display = tab==="historial" ? "" : "none";
+}
+
+// ─── Habitaciones ────────────────────────────────
+const estados = {};
+HABS.forEach(h => estados[h] = null);
+
+function inicializarHabs() {
+  const grid = document.getElementById("habs-grid");
+  grid.innerHTML = "";
+  HABS.forEach(h => {
+    const b = document.createElement("button");
+    b.className = "hab-btn"; b.id = "hab-"+h;
+    b.innerHTML = `<span class="hab-icono">🛏</span><span>${h}</span>`;
+    b.onclick = () => ciclarHab(h, b);
+    grid.appendChild(b);
+  });
+}
+function ciclarHab(h, b) {
+  const c = [null,"checkout","checkin","libre"];
+  const ic = {null:"🛏", checkout:"🧹", checkin:"✨", libre:"🌿"};
+  estados[h] = c[(c.indexOf(estados[h])+1) % c.length];
+  b.className = "hab-btn"+(estados[h]?" "+estados[h]:"");
+  b.innerHTML = `<span class="hab-icono">${ic[estados[h]]}</span><span>${h}</span>`;
+}
+function marcarTodas(e) {
+  const ic = {checkout:"🧹", checkin:"✨", libre:"🌿"};
+  HABS.forEach(h => {
+    estados[h] = e;
+    const b = document.getElementById("hab-"+h);
+    b.className = "hab-btn "+e;
+    b.innerHTML = `<span class="hab-icono">${ic[e]}</span><span>${h}</span>`;
+  });
+}
+
+// ─── Espacios ────────────────────────────────────
+const espActivos = new Set();
+function inicializarEspacios() {
+  const g = document.getElementById("espacios-grid");
+  g.innerHTML = "";
+  ESPACIOS.forEach(e => {
+    const b = document.createElement("button");
+    b.className = "espacio-btn"; b.id = "esp-"+e.id; b.textContent = e.label;
+    b.onclick = () => {
+      if (espActivos.has(e.id)) { espActivos.delete(e.id); b.classList.remove("activo"); }
+      else { espActivos.add(e.id); b.classList.add("activo"); }
+    };
+    g.appendChild(b);
+  });
+}
+
+// ─── Huéspedes ───────────────────────────────────
+let numHuespedes = 0;
+function cambiarNum(d) {
+  numHuespedes = Math.max(0, numHuespedes + d);
+  document.getElementById("num-display").textContent = numHuespedes;
+}
+
+// ─── Pendientes ──────────────────────────────────
+const BADGE_CLS = {ivan:"badge-ivan",lupita:"badge-lupita",pablo:"badge-pablo",todos:"badge-todos",registro:"badge-registro"};
+const BADGE_LBL = {ivan:"🔧 Iván",lupita:"🧹 Lupita",pablo:"📊 Pablo",todos:"👥 Todos",registro:"📁 Registro"};
+
+async function renderPendientes() {
+  const data = await DATA.getAll("pendientes");
+  const list = Object.entries(data).sort((a,b) => (b[1].ts||0)-(a[1].ts||0));
+  const cont = document.getElementById("lista-pendientes");
+  if (!list.length) { cont.innerHTML = '<div class="empty">Sin pendientes ✦</div>'; return; }
+  cont.innerHTML = "";
+  list.forEach(([id, p]) => {
+    const d = document.createElement("div");
+    d.className = "item-card"+(p.resuelto?" hecho":"");
+    d.innerHTML = `
+      <button class="item-check" onclick="togglePend('${id}',${!p.resuelto})" style="border:none;cursor:pointer">
+        ${p.resuelto?"✓":""}
+      </button>
+      <div class="item-info">
+        <div class="item-texto">${p.texto}</div>
+        <div class="item-meta">${p.fecha||""} · <span class="badge ${BADGE_CLS[p.para]}">${BADGE_LBL[p.para]}</span></div>
+      </div>
+      <button class="btn-borrar" onclick="borrarPend('${id}')">✕</button>`;
+    cont.appendChild(d);
+  });
+}
+async function agregarPendiente() {
+  const txt = document.getElementById("pend-texto").value.trim();
+  if (!txt) return;
+  const para = document.getElementById("pend-para").value;
+  await DATA.push("pendientes", {texto:txt, para, resuelto:false, fecha:isoHoy(), ts:Date.now()});
+  document.getElementById("pend-texto").value = "";
+  renderPendientes();
+}
+async function togglePend(id, val) {
+  await DATA.update("pendientes", id, {resuelto:val});
+  renderPendientes();
+}
+async function borrarPend(id) {
+  await DATA.remove("pendientes", id);
+  renderPendientes();
+}
+
+// ─── Bitácora ────────────────────────────────────
+let empActual = "lupita";
+function selEmp(emp, btn) {
+  empActual = emp;
+  ["lupita","ivan"].forEach(e => document.getElementById("ebtab-"+e).classList.remove("activo"));
+  btn.classList.add("activo");
+}
+async function guardarBitacora() {
+  const fecha  = document.getElementById("bit-fecha").value || isoHoy();
+  const horas  = document.getElementById("bit-horas").value || "—";
+  const texto  = document.getElementById("bit-texto").value.trim();
+  if (!texto) return;
+  await DATA.push("bitacora", {empleado:empActual, fecha, horas, texto, ts:Date.now()});
+  document.getElementById("bit-texto").value = "";
+  document.getElementById("bit-horas").value = "";
+  renderHistorial(empActual);
+  mostrarToast("✓ Entrada guardada");
+}
+let histEmp = "lupita";
+async function verHistorial(emp, btn) {
+  histEmp = emp;
+  ["lupita","ivan"].forEach(e => document.getElementById("hbtab-"+e).classList.remove("activo"));
+  if (btn) btn.classList.add("activo");
+  renderHistorial(emp);
+}
+async function renderHorasMes() {
+  const data   = await DATA.getAll("fichajes");
+  const mes    = isoHoy().slice(0,7);
+  const mesLabel = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"][parseInt(mes.slice(5))-1];
+  const cont   = document.getElementById("admin-horas-mes");
+  if (!cont) return;
+
+  const calcHoras = (quien) => {
+    let totalMin = 0;
+    const dias = [];
+    Object.entries(data).forEach(([k,v]) => {
+      if (k.startsWith(quien+"-"+mes) && v.entrada) {
+        let durMin = 0;
+        if (v.salida) {
+          const [eh,em] = v.entrada.split(":").map(Number);
+          const [sh,sm] = v.salida.split(":").map(Number);
+          durMin = (sh*60+sm)-(eh*60+em);
+        }
+        totalMin += durMin;
+        dias.push({fecha:v.fecha, entrada:v.entrada, salida:v.salida||"—", mins:durMin});
+      }
+    });
+    dias.sort((a,b) => b.fecha.localeCompare(a.fecha));
+    return { totalMin, dias };
+  };
+
+  const lup  = calcHoras("lupita");
+  const ivan = calcHoras("ivan");
+  const fmt  = (m) => `${Math.floor(m/60)}h ${m%60}m`;
+
+  cont.innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <div class="res-card ing" style="flex:1">
+        <div class="res-num" style="color:var(--brown)">${fmt(lup.totalMin)}</div>
+        <div class="res-label">🧹 Lupita — ${mesLabel}</div>
+      </div>
+      <div class="res-card eg" style="flex:1">
+        <div class="res-num" style="color:var(--blue)">${fmt(ivan.totalMin)}</div>
+        <div class="res-label">🔧 Iván — ${mesLabel}</div>
+      </div>
+    </div>
+    <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px">Detalle de días</div>
+    ${[...lup.dias.map(d=>({...d,quien:"🧹 Lupita"})), ...ivan.dias.map(d=>({...d,quien:"🔧 Iván"}))]
+      .sort((a,b)=>b.fecha.localeCompare(a.fecha))
+      .slice(0,20)
+      .map(d=>`<div class="fichaje-row">
+        <span class="fichaje-row-fecha">${d.fecha}</span>
+        <span class="fichaje-row-horas">${d.quien} · ${d.entrada}–${d.salida}</span>
+        <span class="fichaje-row-total">${d.mins>0?fmt(d.mins):"en curso"}</span>
+      </div>`).join("") || '<div class="empty">Sin fichajes este mes</div>'}`;
+}
+
+async function renderHistorial(emp) {
+  histEmp = emp;
+  const data = await DATA.getAll("bitacora");
+  const lista = Object.values(data).filter(e=>e.empleado===emp).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const cont = document.getElementById("historial-lista");
+  if (!lista.length) { cont.innerHTML = '<div class="empty">Sin entradas aún ✦</div>'; return; }
+  cont.innerHTML = lista.slice(0,20).map(e => `
+    <div class="bit-entry">
+      <div class="bit-fecha">${e.fecha}</div>
+      <div class="bit-texto">${e.texto}</div>
+      <span class="bit-horas">⏱ ${e.horas} hrs</span>
+    </div>`).join("");
+}
+
+// ─── Caja ────────────────────────────────────────
+let tipoActual = "ingreso";
+let fotoBase64 = "";
+function selTipo(t, btn) {
+  tipoActual = t;
+  document.getElementById("ttab-ing").classList.remove("activo");
+  document.getElementById("ttab-eg").classList.remove("activo");
+  btn.classList.add("activo");
+}
+function previsualizarFoto(input) {
+  const f = input.files[0]; if (!f) return;
+  document.getElementById("foto-label").textContent = f.name;
+  const r = new FileReader();
+  r.onload = e => {
+    fotoBase64 = e.target.result;
+    document.getElementById("foto-preview-cont").innerHTML = `<img src="${fotoBase64}" class="foto-preview"/>`;
+  };
+  r.readAsDataURL(f);
+}
+async function guardarMovimiento() {
+  const monto = parseFloat(document.getElementById("caja-monto").value);
+  const desc  = document.getElementById("caja-desc").value.trim();
+  if (!monto || !desc) { mostrarToast("Completá monto y descripción"); return; }
+  const fecha = document.getElementById("caja-fecha").value || isoHoy();
+  const cat   = document.getElementById("caja-cat").value;
+  await DATA.push("caja", {tipo:tipoActual, fecha, monto, cat, desc, foto:fotoBase64, ts:Date.now()});
+  document.getElementById("caja-monto").value = "";
+  document.getElementById("caja-desc").value  = "";
+  document.getElementById("caja-foto").value  = "";
+  document.getElementById("foto-label").textContent = "Tocá para adjuntar foto";
+  document.getElementById("foto-preview-cont").innerHTML = "";
+  fotoBase64 = "";
+  renderResumenCaja(); renderListaCaja();
+  mostrarToast("✓ Movimiento guardado");
+}
+async function renderResumenCaja() {
+  const data  = await DATA.getAll("caja");
+  const mes   = isoHoy().slice(0,7);
+  const meses_label = {
+    "01":"Enero","02":"Febrero","03":"Marzo","04":"Abril","05":"Mayo","06":"Junio",
+    "07":"Julio","08":"Agosto","09":"Septiembre","10":"Octubre","11":"Noviembre","12":"Diciembre"
+  };
+  document.getElementById("caja-mes-label").textContent = `Resumen — ${meses_label[mes.slice(5)]} ${mes.slice(0,4)}`;
+  const delMes = Object.values(data).filter(m => m.fecha && m.fecha.startsWith(mes));
+  const ing = delMes.filter(m=>m.tipo==="ingreso").reduce((s,m)=>s+m.monto,0);
+  const eg  = delMes.filter(m=>m.tipo==="egreso" ).reduce((s,m)=>s+m.monto,0);
+  const net = ing - eg;
+  document.getElementById("caja-resumen").innerHTML = `
+    <div class="res-card ing"><div class="res-num ing">$${ing.toFixed(2)}</div><div class="res-label">Ingresos</div></div>
+    <div class="res-card eg"><div class="res-num eg">$${eg.toFixed(2)}</div><div class="res-label">Egresos</div></div>
+    <div class="res-card net"><div class="res-num" style="color:${net>=0?"var(--green)":"#b45000"}">${net>=0?"+":""}$${net.toFixed(2)}</div><div class="res-label">Balance</div></div>`;
+}
+async function renderListaCaja() {
+  const data = await DATA.getAll("caja");
+  const lista = Object.values(data).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const cont  = document.getElementById("lista-caja");
+  if (!lista.length) { cont.innerHTML = '<div class="empty">Sin movimientos ✦</div>'; return; }
+  cont.innerHTML = lista.slice(0,30).map(m => `
+    <div class="mov-card">
+      <div class="mov-monto-col">
+        <div class="mov-monto ${m.tipo}">${m.tipo==="ingreso"?"▲":"▼"}</div>
+        <div class="mov-monto ${m.tipo}">$${Number(m.monto).toFixed(2)}</div>
+      </div>
+      <div class="mov-info">
+        <div class="mov-desc">${m.desc}</div>
+        <div class="mov-cat">${m.cat} · ${m.fecha}</div>
+        ${m.foto ? `<img src="${m.foto}" class="mov-foto"/>` : ""}
+      </div>
+    </div>`).join("");
+}
+
+// ─── Generar briefings ───────────────────────────
+async function generar() {
+  const checkouts = HABS.filter(h=>estados[h]==="checkout");
+  const checkins  = HABS.filter(h=>estados[h]==="checkin");
+  const libres    = HABS.filter(h=>estados[h]==="libre");
+  const extL = document.getElementById("extras-lupita").value.trim();
+  const extI = document.getElementById("extras-ivan").value.trim();
+  const pend = Object.values(await DATA.getAll("pendientes")).filter(p=>!p.resuelto);
+  const pL   = pend.filter(p=>p.para==="lupita"||p.para==="todos");
+  const pI   = pend.filter(p=>p.para==="ivan"  ||p.para==="todos");
+  const pP   = pend.filter(p=>p.para==="pablo" ||p.para==="todos");
+  const espS = ESPACIOS.filter(e=>espActivos.has(e.id));
+
+  // Mensaje Lupita
+  let mL = `🌺 *¡Buenos días Lupita!*\n\nBriefing para mañana ${fb(manana)}:\n\n`;
+  mL += `🏡 *Repaso general diario:*\n   Pasillos · Cocina · Alberca · Baño exterior · Palapa · Comedor\n\n`;
+  if (checkouts.length) { mL += `🧹 *Check-out — limpieza completa:*\n`; checkouts.forEach(h=>mL+=`   • ${h}\n`); mL+="\n"; }
+  if (checkins.length)  { mL += `✨ *Check-in — preparar habitación:*\n`; checkins.forEach(h=>mL+=`   • ${h}\n`); mL+="\n"; }
+  if (libres.length)    { mL += `🌿 *Sin movimiento:*\n`; libres.forEach(h=>mL+=`   • ${h}\n`); mL+="\n"; }
+  if (espS.length)      { mL += `🌟 *Espacios especiales:*\n`; espS.forEach(e=>mL+=`   • ${e.detalle}\n`); mL+="\n"; }
+  if (numHuespedes > 0) { mL += `👥 Huéspedes en casa: ${numHuespedes} personas\n\n`; }
+  if (extL) { mL += `📋 *Extras:*\n`; extL.split("\n").forEach(l=>{if(l.trim())mL+=`   • ${l.trim()}\n`;}); mL+="\n"; }
+  if (pL.length) { mL += `📌 *Pendientes del registro:*\n`; pL.forEach(p=>mL+=`   • ${p.texto}\n`); mL+="\n"; }
+  mL += `Cualquier duda me avisás 🙏`;
+
+  // Mensaje Iván
+  let mI = `🔧 *¡Hola Iván!*\n\nTareas para mañana ${fb(manana)}:\n\n`;
+  if (extI) { extI.split("\n").forEach(l=>{if(l.trim())mI+=`   • ${l.trim()}\n`;}); mI+="\n"; }
+  if (pI.length) { mI += `📌 *Pendientes del registro:*\n`; pI.forEach(p=>mI+=`   • ${p.texto}\n`); mI+="\n"; }
+  if (!extI && !pI.length) mI += `   Sin tareas asignadas por ahora.\n\n`;
+  mI += `Cualquier duda le avisás a Pablo 🙏`;
+
+  // Guardar briefing en Firebase (para que Lupita e Iván lo vean)
+  await DATA.set("briefings", isoFecha(manana), {
+    lupita: mL, ivan: mI, generado: new Date().toISOString()
+  });
+
+  document.getElementById("msg-lupita").textContent = mL;
+  document.getElementById("msg-ivan").textContent   = mI;
+  document.getElementById("res-fecha").textContent  = `Para mañana ${fb(manana)}`;
+
+  if (pP.length) {
+    let mP = `📊 *Novedades Casa Tatei — ${fb(hoy)}:*\n\n`;
+    pP.forEach(p=>mP+=`   • ${p.texto}\n`);
+    document.getElementById("msg-pablo").textContent = mP;
+    document.getElementById("card-pablo").style.display = "block";
+  } else {
+    document.getElementById("card-pablo").style.display = "none";
+  }
+
+  // Registro
+  let reg = `REGISTRO — ${fb(hoy)}\n${"=".repeat(36)}\n\nBRIEFING LUPITA:\n${mL}\n\nBRIEFING IVÁN:\n${mI}\n\n`;
+  if (pend.length) { reg += `PENDIENTES:\n`; pend.forEach(p=>reg+=`  [${p.para}] ${p.texto}\n`); }
+  reg += `\n[Generado: ${hoy.toLocaleString("es-MX")}]`;
+
+  const blob = new Blob([reg],{type:"text/plain;charset=utf-8"});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a"); a.href=url; a.download=`casa-tatei-${isoHoy()}.txt`; a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById("res-guardado").textContent = `Registro descargado: casa-tatei-${isoHoy()}.txt`;
+
+  document.getElementById("resultado").classList.add("visible");
+  window.scrollTo(0,0);
+}
+
+function volverDeResultado() {
+  document.getElementById("resultado").classList.remove("visible");
+}
+
+function copiarMsg(idCaja, idBtn, labelOrig) {
+  const texto = document.getElementById(idCaja).textContent;
+  const btn   = document.getElementById(idBtn);
+  // Intentar clipboard API, fallback a execCommand
+  const hacerCopia = () => {
+    btn.textContent = "✓ ¡Copiado! Pegalo en WhatsApp";
+    btn.classList.add("gris");
+    setTimeout(()=>{ btn.textContent = "📋 "+labelOrig; btn.classList.remove("gris"); }, 3000);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(texto).then(hacerCopia).catch(()=>{
+      copiarFallback(texto); hacerCopia();
+    });
+  } else {
+    copiarFallback(texto); hacerCopia();
+  }
+}
+function copiarFallback(texto) {
+  const ta = document.createElement("textarea");
+  ta.value = texto; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  document.execCommand("copy"); document.body.removeChild(ta);
+}
+
+// ─── Vista equipo ────────────────────────────────
+// ─── Fichaje ─────────────────────────────────────
+function horaActual() {
+  const n = new Date();
+  return n.getHours().toString().padStart(2,"0")+":"+n.getMinutes().toString().padStart(2,"0");
+}
+function horaReloj() {
+  const n = new Date();
+  return n.toLocaleTimeString("es-MX", {hour:"2-digit", minute:"2-digit"});
+}
+async function renderFichaje(quien) {
+  const cont = document.getElementById("fichaje-card");
+  const data = await DATA.getAll("fichajes");
+  const clave = quien+"-"+isoHoy();
+  const ficha = data[clave] || null;
+
+  // Horas del mes
+  const mes = isoHoy().slice(0,7);
+  let totalMin = 0;
+  Object.entries(data).forEach(([k,v]) => {
+    if (k.startsWith(quien+"-"+mes) && v.entrada && v.salida) {
+      const [eh,em] = v.entrada.split(":").map(Number);
+      const [sh,sm] = v.salida.split(":").map(Number);
+      totalMin += (sh*60+sm) - (eh*60+em);
+    }
+  });
+  const totalHrs  = Math.floor(totalMin/60);
+  const totalMins = totalMin % 60;
+  const mesLabel  = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"][parseInt(mes.slice(5))-1];
+
+  let html = `<div class="fichaje-card">`;
+  html += `<div class="fichaje-hora" id="reloj-live">${horaReloj()}</div>`;
+
+  if (!ficha) {
+    // Sin entrada hoy
+    html += `<div class="fichaje-estado">Hoy todavía no marcaste entrada</div>`;
+    html += `<button class="btn-fichar entrada" onclick="marcarEntrada('${quien}')">✔ Marcar entrada</button>`;
+  } else if (ficha.entrada && !ficha.salida) {
+    // Entró, no salió
+    html += `<div class="fichaje-estado">Entraste a las <strong>${ficha.entrada}</strong></div>`;
+    html += `<button class="btn-fichar salida" onclick="marcarSalida('${quien}')">✔ Marcar salida</button>`;
+    html += `<div class="fichaje-registro">Entrada registrada ✓</div>`;
+  } else if (ficha.entrada && ficha.salida) {
+    // Día completo
+    const [eh,em] = ficha.entrada.split(":").map(Number);
+    const [sh,sm] = ficha.salida.split(":").map(Number);
+    const mins = (sh*60+sm)-(eh*60+em);
+    const hrs  = Math.floor(mins/60); const min = mins%60;
+    html += `<div class="fichaje-estado" style="color:var(--green);font-weight:600">✓ Día registrado</div>`;
+    html += `<div class="fichaje-registro">
+      <strong>Entrada:</strong> ${ficha.entrada} &nbsp;·&nbsp; <strong>Salida:</strong> ${ficha.salida}<br>
+      <strong>Total hoy:</strong> ${hrs}h ${min}m
+    </div>`;
+  }
+
+  html += `<div class="horas-mes-badge">⏱ ${totalHrs}h ${totalMins}m trabajadas en ${mesLabel}</div>`;
+  html += `</div>`;
+  cont.innerHTML = html;
+
+  // Reloj en vivo
+  setInterval(() => {
+    const r = document.getElementById("reloj-live");
+    if (r) r.textContent = horaReloj();
+  }, 10000);
+}
+
+async function marcarEntrada(quien) {
+  const hora  = horaActual();
+  const clave = quien+"-"+isoHoy();
+  await DATA.set("fichajes", clave, {empleado:quien, fecha:isoHoy(), entrada:hora, salida:null, ts:Date.now()});
+  mostrarToast(`✓ Entrada marcada a las ${hora}`);
+  renderFichaje(quien);
+  // Guardar también en bitácora como referencia
+}
+async function marcarSalida(quien) {
+  const hora  = horaActual();
+  const clave = quien+"-"+isoHoy();
+  const data  = await DATA.getAll("fichajes");
+  const ficha = data[clave] || {};
+  await DATA.set("fichajes", clave, {...ficha, salida:hora});
+  // Calcular horas y guardar en bitácora
+  if (ficha.entrada) {
+    const [eh,em] = ficha.entrada.split(":").map(Number);
+    const [sh,sm] = hora.split(":").map(Number);
+    const mins = (sh*60+sm)-(eh*60+em);
+    const hrs  = (mins/60).toFixed(1);
+    await DATA.push("bitacora", {
+      empleado:quien, fecha:isoHoy(),
+      horas:hrs,
+      texto:`Día registrado automáticamente. Entrada: ${ficha.entrada} · Salida: ${hora}`,
+      ts:Date.now(), tipo:"fichaje"
+    });
+  }
+  mostrarToast(`✓ Salida marcada a las ${hora}`);
+  renderFichaje(quien);
+}
+
+// ─── Vista equipo ────────────────────────────────
+async function renderBriefingEquipo(quien) {
+  const cont = document.getElementById("equipo-briefing-contenido");
+  // Buscar briefing de hoy
+  const data = await DATA.getAll("briefings");
+  const briefingHoy = data[isoHoy()];
+  if (briefingHoy && briefingHoy[quien]) {
+    cont.innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-titulo">Tu briefing de hoy</div>
+        </div>
+        <div class="card-body">
+          <div class="briefing-equipo">${briefingHoy[quien]}</div>
+        </div>
+      </div>`;
+  } else {
+    // Buscar el más reciente
+    const fechas = Object.keys(data).sort().reverse();
+    const reciente = fechas.find(f => data[f][quien]);
+    if (reciente) {
+      cont.innerHTML = `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-titulo">Último briefing (${reciente})</div>
+          </div>
+          <div class="card-body">
+            <div class="briefing-equipo">${data[reciente][quien]}</div>
+          </div>
+        </div>`;
+    } else {
+      cont.innerHTML = `
+        <div class="sin-briefing">
+          <div class="emoji">🌿</div>
+          <p>Todavía no hay briefing para hoy.<br>Priscilla lo va a enviar esta noche.</p>
+        </div>`;
+    }
+  }
+}
+
+async function renderHistorialEquipo(quien) {
+  const data  = await DATA.getAll("bitacora");
+  const lista = Object.values(data).filter(e=>e.empleado===quien).sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const cont  = document.getElementById("equipo-historial-contenido");
+  if (!lista.length) {
+    cont.innerHTML = '<div class="empty">Sin entradas aún ✦</div>';
+    return;
+  }
+  cont.innerHTML = `<div class="card"><div class="card-header"><div class="card-titulo">Tu historial</div></div><div class="card-body">`+
+    lista.slice(0,15).map(e=>`
+      <div class="bit-entry">
+        <div class="bit-fecha">${e.fecha}</div>
+        <div class="bit-texto">${e.texto}</div>
+        <span class="bit-horas">⏱ ${e.horas} hrs</span>
+      </div>`).join("")+
+    `</div></div>`;
+}
+
+// ─── Toast ───────────────────────────────────────
+function mostrarToast(msg) {
+  let t = document.getElementById("toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "toast";
+    t.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#3a3028;color:white;padding:10px 20px;border-radius:20px;font-size:0.85rem;z-index:300;opacity:0;transition:opacity 0.3s;white-space:nowrap;pointer-events:none";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.opacity = "1";
+  setTimeout(()=>{ t.style.opacity = "0"; }, 2500);
+}
+
+// ─── Init ────────────────────────────────────────
+// Si hay datos guardados, mostrar aviso offline
+if (!USE_FB) {
+  // pequeño delay para que el DOM esté listo
+  setTimeout(()=>{
+    document.getElementById("firebase-status").style.display = "block";
+  }, 500);
+}
+</script>
+</body>
+</html>
