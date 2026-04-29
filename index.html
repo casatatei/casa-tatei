@@ -1095,6 +1095,7 @@ function cerrarPinModal() {
 function verificarPin() {
   const pin = document.getElementById("pin-input").value;
   if (pin === PIN_ADMIN) {
+    localStorage.setItem("tatei-sesion", "admin");
     cerrarPinModal();
     entrarAdmin();
   } else {
@@ -1134,6 +1135,7 @@ function volverLogin() {
 let equipoActual = "lupita";
 async function entrarEquipo(quien) {
   equipoActual = quien;
+  localStorage.setItem("tatei-sesion", quien);
   const nombres = { lupita: "¡Hola Lupita! 🌺", ivan: "¡Hola Iván! 🔧" };
   document.getElementById("equipo-nombre-header").textContent = nombres[quien];
   document.getElementById("equipo-fecha-header").textContent = fb(hoy);
@@ -1146,6 +1148,7 @@ async function entrarEquipo(quien) {
 }
 
 function cerrarSesion() {
+  localStorage.removeItem("tatei-sesion");
   mostrarScreen("login");
   document.getElementById("login-opciones").style.display = "flex";
   document.getElementById("equipo-selector").style.display = "none";
@@ -1871,13 +1874,16 @@ function mostrarToast(msg) {
 }
 
 // ─── Init ────────────────────────────────────────
-// Si hay datos guardados, mostrar aviso offline
-if (!USE_FB) {
-  // pequeño delay para que el DOM esté listo
-  setTimeout(()=>{
+setTimeout(() => {
+  const sesion = localStorage.getItem("tatei-sesion");
+  if (sesion === "admin") {
+    entrarAdmin();
+  } else if (sesion === "lupita" || sesion === "ivan") {
+    entrarEquipo(sesion);
+  } else if (!USE_FB) {
     document.getElementById("firebase-status").style.display = "block";
-  }, 500);
-}
+  }
+}, 100);
 </script>
 </body>
 </html>
