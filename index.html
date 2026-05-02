@@ -1025,8 +1025,8 @@ const PIN_ADMIN = "1234"; // ← podés cambiarlo aquí
 const hoy    = new Date();
 const manana = new Date(hoy); manana.setDate(hoy.getDate()+1);
 function fb(d){ return `${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`; }
-function isoHoy(){ return hoy.toISOString().slice(0,10); }
-function isoFecha(d){ return d.toISOString().slice(0,10); }
+function isoHoy(){ const n=new Date(); return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0"); }
+function isoFecha(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 
 // ─── Firebase / localStorage ─────────────────────
 const USE_FB = window.FIREBASE_CONFIG && window.FIREBASE_CONFIG.apiKey !== "PENDIENTE";
