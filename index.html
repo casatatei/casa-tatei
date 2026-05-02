@@ -343,6 +343,15 @@
     .facturado-toggle { display:flex; align-items:center; gap:5px; font-size:0.73rem; color:var(--muted); cursor:pointer; user-select:none; }
     .facturado-toggle input { accent-color: var(--brown); width:14px; height:14px; cursor:pointer; }
     .badge-fact { background:#d4edda; color:#1a6b2e; border-radius:4px; padding:1px 6px; font-size:0.68rem; font-weight:600; }
+    .mov-edit-btn { background:none; border:1px solid var(--border); border-radius:6px; padding:3px 7px; font-size:0.75rem; color:var(--muted); cursor:pointer; margin-left:auto; flex-shrink:0; }
+    .mov-edit-btn:active { background:var(--cream); }
+    .saldo-row { display:flex; gap:10px; margin-bottom:4px; }
+    .saldo-cuenta { flex:1; background:white; border-radius:12px; border:1px solid var(--border); padding:12px 14px; }
+    .saldo-cuenta-label { font-size:0.72rem; color:var(--muted); margin-bottom:4px; }
+    .saldo-cuenta-num { font-size:1.2rem; font-weight:700; color:var(--brown); }
+    .saldo-cuenta-num.neg { color:#b45000; }
+    .editando-banner { background:#fff8e1; border:1px solid #f5c542; border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:0.85rem; display:none; }
+    .editando-banner.visible { display:flex; align-items:center; gap:8px; justify-content:space-between; }
     /* Lightbox */
     #foto-lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:999; align-items:center; justify-content:center; }
     #foto-lightbox.open { display:flex; }
@@ -777,6 +786,29 @@
         <div class="app-header-sub">Ingresos y egresos · Solo admin</div>
       </div>
       <div class="contenido">
+        <!-- Saldos actuales -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-titulo">💼 Saldos actuales</div>
+            <button class="btn-sec" style="font-size:0.75rem;padding:4px 10px" onclick="toggleSaldoForm()">⚙️ Configurar</button>
+          </div>
+          <div class="card-body">
+            <div class="saldo-row" id="saldo-display"></div>
+            <div id="saldo-form" style="display:none;margin-top:12px">
+              <div class="campo-row">
+                <div class="campo">
+                  <label>💵 Saldo inicial efectivo $</label>
+                  <input type="number" class="input-base" id="saldo-efectivo-input" min="0" step="0.01" placeholder="0.00"/>
+                </div>
+                <div class="campo">
+                  <label>💳 Saldo inicial banco $</label>
+                  <input type="number" class="input-base" id="saldo-banco-input" min="0" step="0.01" placeholder="0.00"/>
+                </div>
+              </div>
+              <button class="btn-primary mt-3" onclick="guardarSaldosIniciales()">Guardar saldos →</button>
+            </div>
+          </div>
+        </div>
         <!-- Resumen -->
         <div class="card" id="caja-resumen-card">
           <div class="card-header"><div class="card-titulo" id="caja-mes-label">Resumen del mes</div></div>
@@ -788,6 +820,10 @@
         <div class="card">
           <div class="card-header"><div class="card-titulo">Registrar movimiento</div></div>
           <div class="card-body">
+            <div class="editando-banner" id="editando-banner">
+              <span>✏️ Editando movimiento</span>
+              <button class="btn-sec" style="font-size:0.78rem;padding:4px 10px" onclick="cancelarEdicion()">✕ Cancelar</button>
+            </div>
             <div class="tipo-toggle">
               <button class="tipo-btn ingreso activo" id="ttab-ing" onclick="selTipo('ingreso',this)">💚 Ingreso</button>
               <button class="tipo-btn egreso" id="ttab-eg" onclick="selTipo('egreso',this)">🟠 Egreso</button>
@@ -843,7 +879,7 @@
               <input type="file" id="caja-foto" accept="image/*" capture="environment" style="display:none" onchange="previsualizarFoto(this)"/>
               <div id="foto-preview-cont"></div>
             </div>
-            <button class="btn-primary mt-3" onclick="guardarMovimiento()">Guardar →</button>
+            <button class="btn-primary mt-3" id="caja-guardar-btn" onclick="guardarMovimiento()">Guardar →</button>
           </div>
         </div>
         <!-- Lista -->
@@ -1190,7 +1226,7 @@ function navAdmin(tab, btn) {
   document.getElementById("admin-body").scrollTo(0,0);
   if (tab === "pendientes") renderPendientes();
   if (tab === "bitacora")   { renderHistorial(empActual); renderHorasMes(); }
-  if (tab === "caja")       { renderResumenCaja(); renderListaCaja(); }
+  if (tab === "caja")       { renderResumenCaja(); renderListaCaja(); renderSaldos(); }
 }
 
 // ─── Navegación equipo ───────────────────────────
@@ -1453,7 +1489,7 @@ async function renderHorasMes() {
 
   const lup  = calcHoras("lupita");
   const ivan = calcHoras("ivan");
-  const fmt  = (m) => `${Math.floor(m/60)}h ${m%60}m`;
+  const fmt  = (m) => fmtHoras(m);
 
   cont.innerHTML = `
     <div style="display:flex;gap:10px;margin-bottom:16px">
@@ -1491,9 +1527,25 @@ async function renderHistorial(emp) {
     </div>`).join("");
 }
 
+// ─── Redondeo 15 minutos ─────────────────────────
+function redondear15(mins) {
+  return Math.round(mins / 15) * 15;
+}
+function fmtHoras(mins) {
+  const r = redondear15(mins);
+  const h = Math.floor(r / 60);
+  const m = r % 60;
+  if (m === 0)  return `${h}h`;
+  if (m === 15) return `${h}h 15min`;
+  if (m === 30) return `${h}h 30min`;
+  if (m === 45) return `${h}h 45min`;
+  return `${h}h ${m}min`;
+}
+
 // ─── Caja ────────────────────────────────────────
 let tipoActual = "ingreso";
 let fotoBase64 = "";
+let editandoId  = null;
 function selTipo(t, btn) {
   tipoActual = t;
   document.getElementById("ttab-ing").classList.remove("activo");
@@ -1510,6 +1562,38 @@ function previsualizarFoto(input) {
   };
   r.readAsDataURL(f);
 }
+function limpiarFormCaja() {
+  document.getElementById("caja-monto").value = "";
+  document.getElementById("caja-desc").value  = "";
+  document.getElementById("caja-foto").value  = "";
+  document.getElementById("foto-label").textContent = "Tocá para adjuntar foto";
+  document.getElementById("foto-preview-cont").innerHTML = "";
+  fotoBase64 = ""; editandoId = null;
+  document.getElementById("editando-banner").classList.remove("visible");
+  document.getElementById("caja-guardar-btn").textContent = "Guardar →";
+}
+function cancelarEdicion() { limpiarFormCaja(); }
+async function editarMovimiento(id) {
+  const data  = await DATA.getAll("caja");
+  const m     = data[id]; if (!m) return;
+  editandoId  = id;
+  tipoActual  = m.tipo;
+  document.getElementById("ttab-ing").classList.toggle("activo", m.tipo==="ingreso");
+  document.getElementById("ttab-eg").classList.toggle("activo",  m.tipo==="egreso");
+  document.getElementById("caja-fecha").value = m.fecha || isoHoy();
+  document.getElementById("caja-monto").value = m.monto;
+  document.getElementById("caja-cat").value   = m.cat || "reserva";
+  document.getElementById("caja-desc").value  = m.desc || "";
+  document.getElementById("caja-pago").value  = m.pago || "efectivo";
+  if (m.foto) {
+    fotoBase64 = m.foto;
+    document.getElementById("foto-preview-cont").innerHTML = `<img src="${m.foto}" class="foto-preview"/>`;
+    document.getElementById("foto-label").textContent = "Foto cargada";
+  }
+  document.getElementById("editando-banner").classList.add("visible");
+  document.getElementById("caja-guardar-btn").textContent = "Actualizar →";
+  document.querySelector("#atab-caja .card:nth-child(3)").scrollIntoView({behavior:"smooth"});
+}
 async function guardarMovimiento() {
   const monto = parseFloat(document.getElementById("caja-monto").value);
   const desc  = document.getElementById("caja-desc").value.trim();
@@ -1517,15 +1601,55 @@ async function guardarMovimiento() {
   const fecha = document.getElementById("caja-fecha").value || isoHoy();
   const cat   = document.getElementById("caja-cat").value;
   const pago  = document.getElementById("caja-pago").value;
-  await DATA.push("caja", {tipo:tipoActual, fecha, monto, cat, desc, pago, foto:fotoBase64, facturado:false, ts:Date.now()});
-  document.getElementById("caja-monto").value = "";
-  document.getElementById("caja-desc").value  = "";
-  document.getElementById("caja-foto").value  = "";
-  document.getElementById("foto-label").textContent = "Tocá para adjuntar foto";
-  document.getElementById("foto-preview-cont").innerHTML = "";
-  fotoBase64 = "";
-  renderResumenCaja(); renderListaCaja();
-  mostrarToast("✓ Movimiento guardado");
+  if (editandoId) {
+    const data = await DATA.getAll("caja");
+    const viejo = data[editandoId] || {};
+    await DATA.update("caja", editandoId, {tipo:tipoActual, fecha, monto, cat, desc, pago, foto:fotoBase64||viejo.foto||"", facturado:viejo.facturado||false});
+    mostrarToast("✓ Movimiento actualizado");
+  } else {
+    await DATA.push("caja", {tipo:tipoActual, fecha, monto, cat, desc, pago, foto:fotoBase64, facturado:false, ts:Date.now()});
+    mostrarToast("✓ Movimiento guardado");
+  }
+  limpiarFormCaja();
+  renderResumenCaja(); renderListaCaja(); renderSaldos();
+}
+async function renderSaldos() {
+  const saldos = await DATA.getAll("saldos");
+  const movs   = await DATA.getAll("caja");
+  const si_ef  = parseFloat((saldos.efectivo||{}).monto||0);
+  const si_bn  = parseFloat((saldos.banco   ||{}).monto||0);
+  const todos  = Object.values(movs);
+  const ef_ing = todos.filter(m=>m.tipo==="ingreso"&&m.pago==="efectivo").reduce((s,m)=>s+Number(m.monto),0);
+  const ef_eg  = todos.filter(m=>m.tipo==="egreso" &&m.pago==="efectivo").reduce((s,m)=>s+Number(m.monto),0);
+  const bn_ing = todos.filter(m=>m.tipo==="ingreso"&&(m.pago==="tarjeta"||m.pago==="transferencia")).reduce((s,m)=>s+Number(m.monto),0);
+  const bn_eg  = todos.filter(m=>m.tipo==="egreso" &&(m.pago==="tarjeta"||m.pago==="transferencia")).reduce((s,m)=>s+Number(m.monto),0);
+  const ef_tot = si_ef + ef_ing - ef_eg;
+  const bn_tot = si_bn + bn_ing - bn_eg;
+  document.getElementById("saldo-display").innerHTML = `
+    <div class="saldo-cuenta">
+      <div class="saldo-cuenta-label">💵 Caja efectivo</div>
+      <div class="saldo-cuenta-num ${ef_tot<0?"neg":""}">$${ef_tot.toFixed(2)}</div>
+    </div>
+    <div class="saldo-cuenta">
+      <div class="saldo-cuenta-label">💳 Cuenta banco</div>
+      <div class="saldo-cuenta-num ${bn_tot<0?"neg":""}">$${bn_tot.toFixed(2)}</div>
+    </div>`;
+  // Pre-fill config form
+  if (saldos.efectivo) document.getElementById("saldo-efectivo-input").value = si_ef;
+  if (saldos.banco)    document.getElementById("saldo-banco-input").value    = si_bn;
+}
+async function guardarSaldosIniciales() {
+  const ef = parseFloat(document.getElementById("saldo-efectivo-input").value)||0;
+  const bn = parseFloat(document.getElementById("saldo-banco-input").value)||0;
+  await DATA.set("saldos","efectivo",{monto:ef});
+  await DATA.set("saldos","banco",   {monto:bn});
+  document.getElementById("saldo-form").style.display = "none";
+  renderSaldos();
+  mostrarToast("✓ Saldos guardados");
+}
+function toggleSaldoForm() {
+  const f = document.getElementById("saldo-form");
+  f.style.display = f.style.display==="none" ? "block" : "none";
 }
 async function renderResumenCaja() {
   const data  = await DATA.getAll("caja");
@@ -1536,13 +1660,13 @@ async function renderResumenCaja() {
   };
   document.getElementById("caja-mes-label").textContent = `Resumen — ${meses_label[mes.slice(5)]} ${mes.slice(0,4)}`;
   const delMes = Object.values(data).filter(m => m.fecha && m.fecha.startsWith(mes));
-  const ing = delMes.filter(m=>m.tipo==="ingreso").reduce((s,m)=>s+m.monto,0);
-  const eg  = delMes.filter(m=>m.tipo==="egreso" ).reduce((s,m)=>s+m.monto,0);
+  const ing = delMes.filter(m=>m.tipo==="ingreso").reduce((s,m)=>s+Number(m.monto),0);
+  const eg  = delMes.filter(m=>m.tipo==="egreso" ).reduce((s,m)=>s+Number(m.monto),0);
   const net = ing - eg;
   document.getElementById("caja-resumen").innerHTML = `
-    <div class="res-card ing"><div class="res-num ing">$${ing.toFixed(2)}</div><div class="res-label">Ingresos</div></div>
-    <div class="res-card eg"><div class="res-num eg">$${eg.toFixed(2)}</div><div class="res-label">Egresos</div></div>
-    <div class="res-card net"><div class="res-num" style="color:${net>=0?"var(--green)":"#b45000"}">${net>=0?"+":""}$${net.toFixed(2)}</div><div class="res-label">Balance</div></div>`;
+    <div class="res-card ing"><div class="res-num ing">$${ing.toFixed(2)}</div><div class="res-label">Ingresos mes</div></div>
+    <div class="res-card eg"><div class="res-num eg">$${eg.toFixed(2)}</div><div class="res-label">Egresos mes</div></div>
+    <div class="res-card net"><div class="res-num" style="color:${net>=0?"var(--green)":"#b45000"}">${net>=0?"+":""}$${net.toFixed(2)}</div><div class="res-label">Balance mes</div></div>`;
 }
 async function renderListaCaja() {
   const data = await DATA.getAll("caja");
@@ -1567,6 +1691,7 @@ async function renderListaCaja() {
             Facturado
           </label>
           ${m.facturado ? `<span class="badge-fact">✓ Facturado</span>` : ""}
+          <button class="mov-edit-btn" onclick="editarMovimiento('${id}')">✏️ Editar</button>
         </div>
       </div>
     </div>`).join("");
@@ -1804,8 +1929,8 @@ async function renderFichaje(quien) {
       totalMin += (sh*60+sm) - (eh*60+em);
     }
   });
-  const totalHrs  = Math.floor(totalMin/60);
-  const totalMins = totalMin % 60;
+  const totalHrs  = Math.floor(redondear15(totalMin)/60);
+  const totalMins = redondear15(totalMin) % 60;
   const mesLabel  = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"][parseInt(mes.slice(5))-1];
 
   let html = `<div class="fichaje-card">`;
