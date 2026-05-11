@@ -1473,11 +1473,16 @@ async function guardarBitacora() {
   const horas  = document.getElementById("bit-horas").value || "—";
   const texto  = document.getElementById("bit-texto").value.trim();
   if (!texto) return;
-  await DATA.push("bitacora", {empleado:empActual, fecha, horas, texto, ts:Date.now()});
-  document.getElementById("bit-texto").value = "";
-  document.getElementById("bit-horas").value = "";
-  renderHistorial(empActual);
-  mostrarToast("✓ Entrada guardada");
+  try {
+    await DATA.push("bitacora", {empleado:empActual, fecha, horas, texto, ts:Date.now()});
+    document.getElementById("bit-texto").value = "";
+    document.getElementById("bit-horas").value = "";
+    renderHistorial(empActual);
+    mostrarToast("✓ Entrada guardada");
+  } catch(e) {
+    console.error("guardarBitacora:", e);
+    mostrarToast("⚠️ No se pudo guardar. Revisá tu conexión.");
+  }
 }
 let histEmp = "lupita";
 async function verHistorial(emp, btn) {
@@ -1528,12 +1533,12 @@ async function renderHorasMes() {
       </div>
     </div>
     <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px">Detalle de días</div>
-    ${[...lup.dias.map(d=>({...d,quien:"🧹 Lupita"})), ...ivan.dias.map(d=>({...d,quien:"🔧 Iván"}))]
+    ${[...lup.dias.map(d=>({...d,etiqueta:"🧹 Lupita"})), ...ivan.dias.map(d=>({...d,etiqueta:"🔧 Iván"}))]
       .sort((a,b)=>b.fecha.localeCompare(a.fecha))
       .slice(0,20)
       .map(d=>`<div class="fichaje-row">
         <span class="fichaje-row-fecha">${d.fecha}</span>
-        <span class="fichaje-row-horas">${d.quien==="lupita"?"🧹 Lupita":"🔧 Iván"} · ${d.entrada}–${d.salida||"en curso"}</span>
+        <span class="fichaje-row-horas">${d.etiqueta} · ${d.entrada}–${d.salida||"en curso"}</span>
         <span class="fichaje-row-total">${d.mins>0?fmt(d.mins):"en curso"}</span>
         <button class="mov-edit-btn" onclick="abrirFichajeModal('${d.key}','${d.quien}')">✏️</button>
       </div>`).join("") || '<div class="empty">Sin fichajes este mes</div>'}`;
@@ -1573,31 +1578,34 @@ async function guardarFichajeEditado() {
     }
   }
   document.getElementById("fichaje-edit-error").style.display = "none";
-  const nuevaClave = fichajeEditQuien+"-"+fecha;
-  const datosNuevos = {empleado:fichajeEditQuien, fecha, entrada, salida:salida||null, ts:Date.now()};
-  // Si cambió la fecha, borrar la clave vieja
-  if (fichajeEditKey !== nuevaClave) {
-    await DATA.remove("fichajes", fichajeEditKey);
-  }
-  await DATA.set("fichajes", nuevaClave, datosNuevos);
-  // Actualizar bitácora automática si existe
-  if (salida) {
-    const [eh,em] = entrada.split(":").map(Number);
-    const [sh,sm] = salida.split(":").map(Number);
-    const mins = (sh*60+sm)-(eh*60+em);
-    const hrs  = (mins/60).toFixed(1);
-    const bitData = await DATA.getAll("bitacora");
-    const bitKey  = Object.keys(bitData).find(k => bitData[k].empleado===fichajeEditQuien && bitData[k].fecha===fecha && bitData[k].tipo==="fichaje");
-    if (bitKey) {
-      await DATA.update("bitacora", bitKey, {
-        horas: hrs,
-        texto: `Día registrado. Entrada: ${entrada} · Salida: ${salida}`
-      });
+  try {
+    const nuevaClave = fichajeEditQuien+"-"+fecha;
+    const datosNuevos = {empleado:fichajeEditQuien, fecha, entrada, salida:salida||null, ts:Date.now()};
+    if (fichajeEditKey !== nuevaClave) {
+      await DATA.remove("fichajes", fichajeEditKey);
     }
+    await DATA.set("fichajes", nuevaClave, datosNuevos);
+    if (salida) {
+      const [eh,em] = entrada.split(":").map(Number);
+      const [sh,sm] = salida.split(":").map(Number);
+      const mins = (sh*60+sm)-(eh*60+em);
+      const hrs  = (mins/60).toFixed(1);
+      const bitData = await DATA.getAll("bitacora");
+      const bitKey  = Object.keys(bitData).find(k => bitData[k].empleado===fichajeEditQuien && bitData[k].fecha===fecha && bitData[k].tipo==="fichaje");
+      if (bitKey) {
+        await DATA.update("bitacora", bitKey, {
+          horas: hrs,
+          texto: `Día registrado. Entrada: ${entrada} · Salida: ${salida}`
+        });
+      }
+    }
+    cerrarFichajeModal();
+    renderHorasMes();
+    mostrarToast("✓ Fichaje actualizado");
+  } catch(e) {
+    console.error("guardarFichajeEditado:", e);
+    mostrarToast("⚠️ No se pudo guardar. Revisá tu conexión.");
   }
-  cerrarFichajeModal();
-  renderHorasMes();
-  mostrarToast("✓ Fichaje actualizado");
 }
 async function renderHistorial(emp) {
   histEmp = emp;
@@ -1687,17 +1695,22 @@ async function guardarMovimiento() {
   const fecha = document.getElementById("caja-fecha").value || isoHoy();
   const cat   = document.getElementById("caja-cat").value;
   const pago  = document.getElementById("caja-pago").value;
-  if (editandoId) {
-    const data = await DATA.getAll("caja");
-    const viejo = data[editandoId] || {};
-    await DATA.update("caja", editandoId, {tipo:tipoActual, fecha, monto, cat, desc, pago, foto:fotoBase64||viejo.foto||"", facturado:viejo.facturado||false});
-    mostrarToast("✓ Movimiento actualizado");
-  } else {
-    await DATA.push("caja", {tipo:tipoActual, fecha, monto, cat, desc, pago, foto:fotoBase64, facturado:false, ts:Date.now()});
-    mostrarToast("✓ Movimiento guardado");
+  try {
+    if (editandoId) {
+      const data = await DATA.getAll("caja");
+      const viejo = data[editandoId] || {};
+      await DATA.update("caja", editandoId, {tipo:tipoActual, fecha, monto, cat, desc, pago, foto:fotoBase64||viejo.foto||"", facturado:viejo.facturado||false});
+      mostrarToast("✓ Movimiento actualizado");
+    } else {
+      await DATA.push("caja", {tipo:tipoActual, fecha, monto, cat, desc, pago, foto:fotoBase64, facturado:false, ts:Date.now()});
+      mostrarToast("✓ Movimiento guardado");
+    }
+    limpiarFormCaja();
+    renderResumenCaja(); renderListaCaja(); renderSaldos();
+  } catch(e) {
+    console.error("guardarMovimiento:", e);
+    mostrarToast("⚠️ No se pudo guardar. Revisá tu conexión.");
   }
-  limpiarFormCaja();
-  renderResumenCaja(); renderListaCaja(); renderSaldos();
 }
 async function renderSaldos() {
   const saldos = await DATA.getAll("saldos");
@@ -1727,11 +1740,16 @@ async function renderSaldos() {
 async function guardarSaldosIniciales() {
   const ef = parseFloat(document.getElementById("saldo-efectivo-input").value)||0;
   const bn = parseFloat(document.getElementById("saldo-banco-input").value)||0;
-  await DATA.set("saldos","efectivo",{monto:ef});
-  await DATA.set("saldos","banco",   {monto:bn});
-  document.getElementById("saldo-form").style.display = "none";
-  renderSaldos();
-  mostrarToast("✓ Saldos guardados");
+  try {
+    await DATA.set("saldos","efectivo",{monto:ef});
+    await DATA.set("saldos","banco",   {monto:bn});
+    document.getElementById("saldo-form").style.display = "none";
+    renderSaldos();
+    mostrarToast("✓ Saldos guardados");
+  } catch(e) {
+    console.error("guardarSaldosIniciales:", e);
+    mostrarToast("⚠️ No se pudo guardar. Revisá tu conexión.");
+  }
 }
 function toggleSaldoForm() {
   const f = document.getElementById("saldo-form");
@@ -1973,21 +1991,25 @@ async function renderNovedadesEquipo() {
 async function guardarBitacoraEquipo() {
   const texto = document.getElementById("equipo-bit-texto").value.trim();
   if (!texto) return;
-  // Buscar fichaje de hoy para las horas
-  const fichajes = await DATA.getAll("fichajes");
-  const ficha    = fichajes[equipoActual+"-"+isoHoy()];
-  let horas = "—";
-  if (ficha && ficha.entrada && ficha.salida) {
-    const [eh,em] = ficha.entrada.split(":").map(Number);
-    const [sh,sm] = ficha.salida.split(":").map(Number);
-    horas = ((sh*60+sm - eh*60-em)/60).toFixed(1);
+  try {
+    const fichajes = await DATA.getAll("fichajes");
+    const ficha    = fichajes[equipoActual+"-"+isoHoy()];
+    let horas = "—";
+    if (ficha && ficha.entrada && ficha.salida) {
+      const [eh,em] = ficha.entrada.split(":").map(Number);
+      const [sh,sm] = ficha.salida.split(":").map(Number);
+      horas = ((sh*60+sm - eh*60-em)/60).toFixed(1);
+    }
+    await DATA.push("bitacora", {
+      empleado: equipoActual, fecha: isoHoy(),
+      horas, texto, ts: Date.now(), tipo: "manual"
+    });
+    document.getElementById("equipo-bit-texto").value = "";
+    mostrarToast("✓ Día guardado en tu bitácora");
+  } catch(e) {
+    console.error("guardarBitacoraEquipo:", e);
+    mostrarToast("⚠️ No se pudo guardar. Revisá tu conexión.");
   }
-  await DATA.push("bitacora", {
-    empleado: equipoActual, fecha: isoHoy(),
-    horas, texto, ts: Date.now(), tipo: "manual"
-  });
-  document.getElementById("equipo-bit-texto").value = "";
-  mostrarToast("✓ Día guardado en tu bitácora");
 }
 
 // ─── Fichaje ─────────────────────────────────────
@@ -2058,32 +2080,40 @@ async function renderFichaje(quien) {
 async function marcarEntrada(quien) {
   const hora  = horaActual();
   const clave = quien+"-"+isoHoy();
-  await DATA.set("fichajes", clave, {empleado:quien, fecha:isoHoy(), entrada:hora, salida:null, ts:Date.now()});
-  mostrarToast(`✓ Entrada marcada a las ${hora}`);
-  renderFichaje(quien);
-  // Guardar también en bitácora como referencia
+  try {
+    await DATA.set("fichajes", clave, {empleado:quien, fecha:isoHoy(), entrada:hora, salida:null, ts:Date.now()});
+    mostrarToast(`✓ Entrada marcada a las ${hora}`);
+    renderFichaje(quien);
+  } catch(e) {
+    console.error("marcarEntrada:", e);
+    mostrarToast("⚠️ No se pudo registrar la entrada. Revisá tu conexión.");
+  }
 }
 async function marcarSalida(quien) {
   const hora  = horaActual();
   const clave = quien+"-"+isoHoy();
-  const data  = await DATA.getAll("fichajes");
-  const ficha = data[clave] || {};
-  await DATA.set("fichajes", clave, {...ficha, salida:hora});
-  // Calcular horas y guardar en bitácora
-  if (ficha.entrada) {
-    const [eh,em] = ficha.entrada.split(":").map(Number);
-    const [sh,sm] = hora.split(":").map(Number);
-    const mins = (sh*60+sm)-(eh*60+em);
-    const hrs  = (mins/60).toFixed(1);
-    await DATA.push("bitacora", {
-      empleado:quien, fecha:isoHoy(),
-      horas:hrs,
-      texto:`Día registrado automáticamente. Entrada: ${ficha.entrada} · Salida: ${hora}`,
-      ts:Date.now(), tipo:"fichaje"
-    });
+  try {
+    const data  = await DATA.getAll("fichajes");
+    const ficha = data[clave] || {};
+    await DATA.set("fichajes", clave, {...ficha, salida:hora});
+    if (ficha.entrada) {
+      const [eh,em] = ficha.entrada.split(":").map(Number);
+      const [sh,sm] = hora.split(":").map(Number);
+      const mins = (sh*60+sm)-(eh*60+em);
+      const hrs  = (mins/60).toFixed(1);
+      await DATA.push("bitacora", {
+        empleado:quien, fecha:isoHoy(),
+        horas:hrs,
+        texto:`Día registrado automáticamente. Entrada: ${ficha.entrada} · Salida: ${hora}`,
+        ts:Date.now(), tipo:"fichaje"
+      });
+    }
+    mostrarToast(`✓ Salida marcada a las ${hora}`);
+    renderFichaje(quien);
+  } catch(e) {
+    console.error("marcarSalida:", e);
+    mostrarToast("⚠️ No se pudo registrar la salida. Revisá tu conexión.");
   }
-  mostrarToast(`✓ Salida marcada a las ${hora}`);
-  renderFichaje(quien);
 }
 
 // ─── Vista equipo ────────────────────────────────
