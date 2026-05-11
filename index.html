@@ -541,6 +541,31 @@
 </div>
 
 
+<!-- Modal editar fichaje -->
+<div class="modal-overlay" id="fichaje-edit-modal">
+  <div class="modal-box">
+    <div class="modal-titulo">✏️ Editar fichaje</div>
+    <div class="modal-sub" id="fichaje-edit-quien"></div>
+    <div class="campo mt-3">
+      <label>Fecha</label>
+      <input type="date" class="input-base" id="fichaje-edit-fecha"/>
+    </div>
+    <div class="campo-row mt-3">
+      <div class="campo">
+        <label>Entrada</label>
+        <input type="time" class="input-base" id="fichaje-edit-entrada"/>
+      </div>
+      <div class="campo">
+        <label>Salida</label>
+        <input type="time" class="input-base" id="fichaje-edit-salida"/>
+      </div>
+    </div>
+    <div class="modal-error" id="fichaje-edit-error">La entrada debe ser antes que la salida</div>
+    <button class="btn-confirmar mt-3" onclick="guardarFichajeEditado()">Guardar cambios</button>
+    <button class="btn-volver-login" style="width:100%;margin-top:10px;color:var(--muted)" onclick="cerrarFichajeModal()">Cancelar</button>
+  </div>
+</div>
+
 <!-- ════════════════════════════════════════════════════
      SCREEN: ADMIN APP
 ════════════════════════════════════════════════════ -->
@@ -1480,7 +1505,7 @@ async function renderHorasMes() {
           durMin = (sh*60+sm)-(eh*60+em);
         }
         totalMin += durMin;
-        dias.push({fecha:v.fecha, entrada:v.entrada, salida:v.salida||"—", mins:durMin});
+        dias.push({key:k, quien, fecha:v.fecha||k.slice(quien.length+1), entrada:v.entrada, salida:v.salida||"", mins:durMin});
       }
     });
     dias.sort((a,b) => b.fecha.localeCompare(a.fecha));
@@ -1508,11 +1533,72 @@ async function renderHorasMes() {
       .slice(0,20)
       .map(d=>`<div class="fichaje-row">
         <span class="fichaje-row-fecha">${d.fecha}</span>
-        <span class="fichaje-row-horas">${d.quien} · ${d.entrada}–${d.salida}</span>
+        <span class="fichaje-row-horas">${d.quien==="lupita"?"🧹 Lupita":"🔧 Iván"} · ${d.entrada}–${d.salida||"en curso"}</span>
         <span class="fichaje-row-total">${d.mins>0?fmt(d.mins):"en curso"}</span>
+        <button class="mov-edit-btn" onclick="abrirFichajeModal('${d.key}','${d.quien}')">✏️</button>
       </div>`).join("") || '<div class="empty">Sin fichajes este mes</div>'}`;
 }
 
+let fichajeEditKey = null;
+let fichajeEditQuien = null;
+async function abrirFichajeModal(key, quien) {
+  fichajeEditKey   = key;
+  fichajeEditQuien = quien;
+  const data  = await DATA.getAll("fichajes");
+  const ficha = data[key] || {};
+  const nombres = {lupita:"🧹 Lupita", ivan:"🔧 Iván"};
+  document.getElementById("fichaje-edit-quien").textContent = nombres[quien] || quien;
+  document.getElementById("fichaje-edit-fecha").value   = ficha.fecha || key.slice(quien.length+1);
+  document.getElementById("fichaje-edit-entrada").value = ficha.entrada || "";
+  document.getElementById("fichaje-edit-salida").value  = ficha.salida  || "";
+  document.getElementById("fichaje-edit-error").style.display = "none";
+  document.getElementById("fichaje-edit-modal").classList.add("visible");
+}
+function cerrarFichajeModal() {
+  document.getElementById("fichaje-edit-modal").classList.remove("visible");
+  fichajeEditKey = null; fichajeEditQuien = null;
+}
+async function guardarFichajeEditado() {
+  const fecha   = document.getElementById("fichaje-edit-fecha").value;
+  const entrada = document.getElementById("fichaje-edit-entrada").value;
+  const salida  = document.getElementById("fichaje-edit-salida").value;
+  if (!fecha || !entrada) { mostrarToast("Fecha y entrada son obligatorias"); return; }
+  // Validar que entrada < salida si hay salida
+  if (salida) {
+    const [eh,em] = entrada.split(":").map(Number);
+    const [sh,sm] = salida.split(":").map(Number);
+    if ((sh*60+sm) <= (eh*60+em)) {
+      document.getElementById("fichaje-edit-error").style.display = "block";
+      return;
+    }
+  }
+  document.getElementById("fichaje-edit-error").style.display = "none";
+  const nuevaClave = fichajeEditQuien+"-"+fecha;
+  const datosNuevos = {empleado:fichajeEditQuien, fecha, entrada, salida:salida||null, ts:Date.now()};
+  // Si cambió la fecha, borrar la clave vieja
+  if (fichajeEditKey !== nuevaClave) {
+    await DATA.remove("fichajes", fichajeEditKey);
+  }
+  await DATA.set("fichajes", nuevaClave, datosNuevos);
+  // Actualizar bitácora automática si existe
+  if (salida) {
+    const [eh,em] = entrada.split(":").map(Number);
+    const [sh,sm] = salida.split(":").map(Number);
+    const mins = (sh*60+sm)-(eh*60+em);
+    const hrs  = (mins/60).toFixed(1);
+    const bitData = await DATA.getAll("bitacora");
+    const bitKey  = Object.keys(bitData).find(k => bitData[k].empleado===fichajeEditQuien && bitData[k].fecha===fecha && bitData[k].tipo==="fichaje");
+    if (bitKey) {
+      await DATA.update("bitacora", bitKey, {
+        horas: hrs,
+        texto: `Día registrado. Entrada: ${entrada} · Salida: ${salida}`
+      });
+    }
+  }
+  cerrarFichajeModal();
+  renderHorasMes();
+  mostrarToast("✓ Fichaje actualizado");
+}
 async function renderHistorial(emp) {
   histEmp = emp;
   const data = await DATA.getAll("bitacora");
