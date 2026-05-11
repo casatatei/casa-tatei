@@ -2066,14 +2066,15 @@ async function renderFichaje(quien) {
     </div>`;
   }
 
-  html += `<div class="horas-mes-badge">⏱ ${totalHrs}h ${totalMins}m trabajadas en ${mesLabel}</div>`;
   html += `</div>`;
   cont.innerHTML = html;
 
-  // Reloj en vivo
-  setInterval(() => {
+  // Reloj en vivo — limpiar intervalo anterior antes de crear uno nuevo
+  if (window._relojInterval) clearInterval(window._relojInterval);
+  window._relojInterval = setInterval(() => {
     const r = document.getElementById("reloj-live");
     if (r) r.textContent = horaReloj();
+    else { clearInterval(window._relojInterval); window._relojInterval = null; }
   }, 10000);
 }
 
@@ -2169,7 +2170,6 @@ async function renderHistorialEquipo(quien) {
       <div class="bit-entry">
         <div class="bit-fecha">${e.fecha}</div>
         <div class="bit-texto">${e.texto}</div>
-        <span class="bit-horas">⏱ ${e.horas} hrs</span>
       </div>`).join("")+
     `</div></div>`;
 }
