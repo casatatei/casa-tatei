@@ -785,7 +785,14 @@
           </div>
         </div>
         <div class="card">
-          <div class="card-header"><div class="card-titulo">Resumen de horas del mes</div></div>
+          <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+            <div class="card-titulo">Horas del equipo</div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <button onclick="navMesBitacora(-1)" style="background:var(--brown-lt);border:none;border-radius:8px;padding:6px 10px;font-size:1rem;color:var(--brown);font-weight:700;cursor:pointer">‹</button>
+              <span id="horas-mes-label" style="font-size:0.85rem;color:var(--muted);min-width:70px;text-align:center"></span>
+              <button onclick="navMesBitacora(1)" id="horas-mes-btn-sig" style="background:var(--brown-lt);border:none;border-radius:8px;padding:6px 10px;font-size:1rem;color:var(--brown);font-weight:700;cursor:pointer">›</button>
+            </div>
+          </div>
           <div class="card-body">
             <div id="admin-horas-mes"></div>
           </div>
@@ -1491,12 +1498,32 @@ async function verHistorial(emp, btn) {
   if (btn) btn.classList.add("activo");
   renderHistorial(emp);
 }
+function navMesBitacora(delta) {
+  const [y, m] = mesBitacoraActual.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  const nuevoMes = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+  // No permitir navegar a meses futuros
+  if (nuevoMes > isoHoy().slice(0,7)) return;
+  mesBitacoraActual = nuevoMes;
+  renderHorasMes();
+}
+
 async function renderHorasMes() {
   const data   = await DATA.getAll("fichajes");
-  const mes    = isoHoy().slice(0,7);
-  const mesLabel = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"][parseInt(mes.slice(5))-1];
+  const mes    = mesBitacoraActual;
+  const MESES  = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const [ano, numMes] = mes.split("-").map(Number);
+  const mesLabel = MESES[numMes - 1] + " " + ano;
   const cont   = document.getElementById("admin-horas-mes");
   if (!cont) return;
+
+  // Actualizar label del mes en el header
+  const labelEl = document.getElementById("horas-mes-label");
+  if (labelEl) labelEl.textContent = MESES[numMes - 1].slice(0,3) + " " + ano;
+
+  // Deshabilitar flecha "siguiente" si ya estamos en el mes actual
+  const btnSig = document.getElementById("horas-mes-btn-sig");
+  if (btnSig) btnSig.style.opacity = mes >= isoHoy().slice(0,7) ? "0.3" : "1";
 
   const calcHoras = (quien) => {
     let totalMin = 0;
@@ -1535,7 +1562,6 @@ async function renderHorasMes() {
     <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:8px">Detalle de días</div>
     ${[...lup.dias.map(d=>({...d,etiqueta:"🧹 Lupita"})), ...ivan.dias.map(d=>({...d,etiqueta:"🔧 Iván"}))]
       .sort((a,b)=>b.fecha.localeCompare(a.fecha))
-      .slice(0,20)
       .map(d=>`<div class="fichaje-row">
         <span class="fichaje-row-fecha">${d.fecha}</span>
         <span class="fichaje-row-horas">${d.etiqueta} · ${d.entrada}–${d.salida||"en curso"}</span>
@@ -1544,6 +1570,7 @@ async function renderHorasMes() {
       </div>`).join("") || '<div class="empty">Sin fichajes este mes</div>'}`;
 }
 
+let mesBitacoraActual = isoHoy().slice(0,7);
 let fichajeEditKey = null;
 let fichajeEditQuien = null;
 async function abrirFichajeModal(key, quien) {
